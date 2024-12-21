@@ -1,5 +1,4 @@
 plugins {
-    id 'com.bertramlabs.asset-pipeline' version '5.0.1'
     id 'groovy'
     id 'org.grails.grails-gsp'
     id 'org.grails.grails-web'
@@ -17,7 +16,6 @@ dependencies {
     implementation 'org.grails:grails-plugin-rest'
     implementation 'org.grails.plugins:gsp'
 
-    runtimeOnly 'com.bertramlabs.plugins:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
     runtimeOnly 'org.grails:grails-plugin-databinding'
