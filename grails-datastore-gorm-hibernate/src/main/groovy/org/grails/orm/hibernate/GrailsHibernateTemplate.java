@@ -222,12 +222,6 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         }
     }
 
-    @Override
-    public void applySettings(Criteria criteria) {
-        if (exposeNativeSession) {
-            prepareCriteria(criteria);
-        }
-    }
 
     public void setCacheQueries(boolean cacheQueries) {
         this.cacheQueries = cacheQueries;
@@ -461,26 +455,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         }
     }
 
-    /**
-     * Prepare the given Criteria object, applying cache settings and/or a
-     * transaction timeout.
-     *
-     * @param criteria the Criteria object to prepare
-     * @deprecated Deprecated because Hibernate Criteria are deprecated
-     */
-    @Deprecated
-    protected void prepareCriteria(Criteria criteria) {
-        if (cacheQueries) {
-            criteria.setCacheable(true);
-        }
-        if (shouldPassReadOnlyToHibernate()) {
-            criteria.setReadOnly(true);
-        }
-        SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory);
-        if (sessionHolder != null && sessionHolder.hasTimeout()) {
-            criteria.setTimeout(sessionHolder.getTimeToLiveInSeconds());
-        }
-    }
+
 
     /**
      * Prepare the given Query object, applying cache settings and/or a
@@ -541,9 +516,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
                 if (retVal instanceof org.hibernate.query.Query) {
                     prepareQuery(((org.hibernate.query.Query) retVal));
                 }
-                if (retVal instanceof Criteria) {
-                    prepareCriteria(((Criteria) retVal));
-                } else if (retVal instanceof Query) {
+                if (retVal instanceof Query) {
                     prepareCriteria(((Query) retVal));
                 }
 
@@ -725,8 +698,8 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         return translator.translate("Hibernate operation: " + msg, sql, sqlException);
     }
 
-    public Serializable save(Object o) {
-        return sessionFactory.getCurrentSession().save(o);
+    public void save(Object o) {
+        sessionFactory.getCurrentSession().persist(o);
     }
 
     public void flush() {

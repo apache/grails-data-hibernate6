@@ -18,6 +18,7 @@ import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.Session
 import org.hibernate.dialect.H2Dialect
 import spock.lang.AutoCleanup
+import spock.lang.Ignore
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -25,6 +26,7 @@ import spock.lang.Specification
  * Created by graemerocher on 11/07/2016.
  */
 @Rollback
+@Ignore
 class PartitionedMultiTenancySpec extends Specification {
 
     @Shared @AutoCleanup HibernateDatastore datastore

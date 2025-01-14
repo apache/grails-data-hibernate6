@@ -46,6 +46,7 @@ import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 
+import java.io.Serializable;
 import java.util.Map;
 
 /**
@@ -56,7 +57,7 @@ import java.util.Map;
  * @author Burt Beckwith
  * @since 1.0
  */
-public class ClosureEventTriggeringInterceptor extends AbstractClosureEventTriggeringInterceptor {
+public class ClosureEventTriggeringInterceptor extends AbstractClosureEventTriggeringInterceptor implements Serializable {
 
     //    private final Logger log = LoggerFactory.getLogger(getClass());
     private static final long serialVersionUID = 1;
@@ -293,10 +294,10 @@ public class ClosureEventTriggeringInterceptor extends AbstractClosureEventTrigg
         }
     }
 
-    @Override
-    public boolean requiresPostCommitHanding(EntityPersister persister) {
-        return false;
-    }
+//    @Override
+//    public boolean requiresPostCommitHanding(EntityPersister persister) {
+//        return false;
+//    }
 
 
     @Override
@@ -330,4 +331,8 @@ public class ClosureEventTriggeringInterceptor extends AbstractClosureEventTrigg
         }
     }
 
+    @Override
+    public boolean requiresPostCommitHandling(EntityPersister persister) {
+        return false;
+    }
 }

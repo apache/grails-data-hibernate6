@@ -37,7 +37,7 @@ public class EventListenerIntegrator implements Integrator {
     }
 
     @SuppressWarnings("unchecked")
-    protected static final List<EventType<? extends Serializable>> TYPES = Arrays.asList(
+    protected static final List<EventType<?>> TYPES = Arrays.asList(
             EventType.AUTO_FLUSH,
             EventType.MERGE,
             EventType.PERSIST,

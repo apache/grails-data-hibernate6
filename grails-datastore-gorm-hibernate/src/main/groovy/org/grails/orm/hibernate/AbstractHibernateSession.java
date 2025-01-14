@@ -18,6 +18,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import jakarta.persistence.FlushModeType;
@@ -83,7 +84,8 @@ public abstract class AbstractHibernateSession extends AbstractAttributeStoringS
     }
 
     public Serializable persist(Object o) {
-        return hibernateTemplate.save(o);
+        hibernateTemplate.save(o);
+        return null;
     }
 
     public void refresh(Object o) {
@@ -118,12 +120,17 @@ public abstract class AbstractHibernateSession extends AbstractAttributeStoringS
         // do nothing
     }
 
+    /**
+     * @deprecated persist method needs to be changed to void
+     * @param objects The Objects
+     * @return
+     */
+    @Deprecated()
     public List<Serializable> persist(Iterable objects) {
-        List<Serializable> identifiers = new ArrayList<Serializable>();
         for (Object object : objects) {
-            identifiers.add(hibernateTemplate.save(object));
+            hibernateTemplate.save(object);
         }
-        return identifiers;
+        return Collections.emptyList();
     }
 
     public <T> T retrieve(Class<T> type, Serializable key) {

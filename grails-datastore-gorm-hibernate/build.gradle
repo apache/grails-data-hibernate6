@@ -6,7 +6,7 @@ dependencies {
     api "org.apache.groovy:groovy"
     api "org.grails:grails-datastore-gorm"
     api "org.springframework:spring-orm"
-    api "org.hibernate:hibernate-core-jakarta:$hibernateVersion", {
+    api "org.hibernate.orm:hibernate-core:$hibernateVersion", {
         exclude group:'commons-logging', module:'commons-logging'
         exclude group:'com.h2database', module:'h2'
         exclude group:'commons-collections', module:'commons-collections'
@@ -20,8 +20,11 @@ dependencies {
         exclude group:'commons-collections', module:'commons-collections'
         exclude group:'org.slf4j', module:'slf4j-api'
     }
+    api ('org.checkerframework:checker-qual:3.48.4')
 
-    compileOnly "org.hibernate:hibernate-ehcache:$hibernateVersion", {
+   api( 'org.jboss:jandex:3.2.3')
+
+    compileOnly "org.hibernate:hibernate-jcache:$hibernateVersion", {
         exclude group:'commons-collections', module:'commons-collections'
         exclude group:'commons-logging', module:'commons-logging'
         exclude group:'com.h2database', module:'h2'
@@ -42,12 +45,13 @@ dependencies {
     }
     testImplementation "com.h2database:h2"
 
-    testImplementation "org.hibernate:hibernate-ehcache:$hibernateVersion"
+//    testImplementation "org.hibernate:hibernate-ehcache:$oldHibernateVersion"
+    testImplementation "org.hibernate:hibernate-jcache:$hibernateVersion"
 
     // groovy proxy fixes bytebuddy to be a bit smarter when it comes to groovy metaClass
-    testImplementation "org.yakworks:hibernate-groovy-proxy:$yakworksHibernateGroovyProxyVersion", {
-        exclude group: "org.codehaus.groovy", module: "groovy"
-    }
+//    testImplementation "org.yakworks:hibernate-groovy-proxy:$yakworksHibernateGroovyProxyVersion", {
+//        exclude group: "org.codehaus.groovy", module: "groovy"
+//    }
 
     testImplementation "org.apache.tomcat:tomcat-jdbc"
     testRuntimeOnly "org.springframework:spring-aop"
@@ -55,7 +59,7 @@ dependencies {
     testRuntimeOnly "org.slf4j:slf4j-simple"
     testRuntimeOnly "org.slf4j:jcl-over-slf4j"
     // The groovydoc task needs the Hibernate 4.x jars in the classpath
-    documentation "org.hibernate:hibernate-core-jakarta:${hibernateVersion}"
+    documentation "org.hibernate.orm:hibernate-core:${hibernateVersion}"
 }
 
 test {

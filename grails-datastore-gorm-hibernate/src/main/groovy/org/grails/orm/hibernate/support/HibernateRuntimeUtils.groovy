@@ -5,7 +5,6 @@ import org.grails.datastore.gorm.GormValidateable
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.validation.ValidationErrors
-import org.grails.orm.hibernate.proxy.HibernateProxyHandler
 import org.codehaus.groovy.runtime.StringGroovyMethods
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Association
@@ -24,7 +23,6 @@ import org.springframework.validation.FieldError
  */
 @CompileStatic
 class HibernateRuntimeUtils {
-    private static ProxyHandler proxyHandler = new HibernateProxyHandler();
 
     private static final String DYNAMIC_FILTER_ENABLER = "dynamicFilterEnabler";
 
@@ -83,9 +81,7 @@ class HibernateRuntimeUtils {
             }
 
             def propertyName = association.name
-            if (!proxyHandler.isInitialized(target, propertyName)) {
-                continue
-            }
+
 
             def otherSide = association.inverseSide
 
@@ -101,9 +97,6 @@ class HibernateRuntimeUtils {
             }
 
             def otherSidePropertyName = otherSide.getName()
-            if (!proxyHandler.isInitialized(inverseObject, otherSidePropertyName)) {
-                continue
-            }
 
             def associationReflector = mappingContext.getEntityReflector(association.associatedEntity)
             def propertyValue = associationReflector.getProperty(inverseObject, otherSidePropertyName)

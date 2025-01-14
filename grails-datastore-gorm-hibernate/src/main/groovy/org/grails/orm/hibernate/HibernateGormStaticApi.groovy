@@ -130,10 +130,11 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
 
     @Override
     GrailsCriteria createCriteria() {
-        def builder = new HibernateCriteriaBuilder(persistentClass, sessionFactory)
-        builder.datastore = (AbstractHibernateDatastore)datastore
-        builder.conversionService = conversionService
-        return builder
+        return null;
+//        def builder = new HibernateCriteriaBuilder(persistentClass, sessionFactory)
+//        builder.datastore = (AbstractHibernateDatastore)datastore
+//        builder.conversionService = conversionService
+//        return builder
     }
 
     @Override
@@ -217,7 +218,7 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
     }
 
     @Override
-    protected void firePostQueryEvent(Session session, Criteria criteria, Object result) {
+    protected void firePostQueryEvent(Session session, CriteriaQuery criteria, Object result) {
         if(result instanceof List) {
             datastore.applicationEventPublisher.publishEvent( new PostQueryEvent(datastore, new HibernateQuery(criteria, persistentEntity), (List)result))
         }
@@ -227,7 +228,7 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
     }
 
     @Override
-    protected void firePreQueryEvent(Session session, Criteria criteria) {
+    protected void firePreQueryEvent(Session session, CriteriaQuery criteria) {
         datastore.applicationEventPublisher.publishEvent( new PreQueryEvent(datastore, new HibernateQuery(criteria, persistentEntity)))
     }
 
@@ -250,8 +251,4 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
         return query
     }
 
-    @CompileDynamic
-    protected void setResultTransformer(Criteria c) {
-        c.resultTransformer = Criteria.DISTINCT_ROOT_ENTITY
-    }
 }

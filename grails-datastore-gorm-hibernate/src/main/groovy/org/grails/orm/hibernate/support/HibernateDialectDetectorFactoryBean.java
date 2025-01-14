@@ -17,10 +17,17 @@ package org.grails.orm.hibernate.support;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Collectors;
+import java.util.HashMap;
 
 import javax.sql.DataSource;
 
+import org.checkerframework.checker.initialization.qual.Initialized;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.UnknownKeyFor;
 import org.grails.orm.hibernate.exceptions.CouldNotDetermineHibernateDialectException;
 import org.hibernate.HibernateException;
 import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl;
@@ -104,7 +111,13 @@ public class HibernateDialectDetectorFactoryBean implements FactoryBean<String>,
                         }
                     }
                 };
-                hibernateDialect = dialectFactory.buildDialect(hibernateProperties, infoSource);
+                HashMap<String, Object> collect = hibernateProperties.entrySet().stream().collect(
+                        Collectors.toMap(
+                                e -> String.valueOf(e.getKey()),
+                                Map.Entry::getValue,
+                                (prev, next) -> next, HashMap::new
+                        ));
+                hibernateDialect = dialectFactory.buildDialect(collect, infoSource);
                 hibernateDialectClassName = hibernateDialect.getClass().getName();
             } catch (HibernateException e) {
                 hibernateDialectClassName = vendorNameDialectMappings.getProperty(dbName);
@@ -135,8 +148,18 @@ public class HibernateDialectDetectorFactoryBean implements FactoryBean<String>,
             }
 
             @Override
+            public <R extends Service> R requireService(@UnknownKeyFor @NonNull @Initialized Class<R> serviceRole) {
+                return ServiceRegistryImplementor.super.requireService(serviceRole);
+            }
+
+            @Override
             public <R extends Service> ServiceBinding<R> locateServiceBinding(Class<R> serviceRole) {
                 return null;
+            }
+
+            @Override
+            public void close() {
+                ServiceRegistryImplementor.super.close();
             }
 
             @Override
@@ -150,6 +173,11 @@ public class HibernateDialectDetectorFactoryBean implements FactoryBean<String>,
 
             @Override
             public void deRegisterChild(ServiceRegistryImplementor child) {
+            }
+
+            @Override
+            public <T extends Service> @Nullable T fromRegistryOrChildren(@UnknownKeyFor @NonNull @Initialized Class<T> serviceRole) {
+                return null;
             }
 
             @Override

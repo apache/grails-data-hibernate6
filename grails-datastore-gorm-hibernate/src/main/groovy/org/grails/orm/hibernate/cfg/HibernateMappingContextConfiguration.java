@@ -270,15 +270,19 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
                 PropertyAccessStrategy.class, "traitProperty", TraitPropertyAccessStrategy.class
         );
 
-        setSessionFactoryObserver(new SessionFactoryObserver() {
+        SessionFactoryObserver sessionFactoryObserver = new SessionFactoryObserver() {
             private static final long serialVersionUID = 1;
-            public void sessionFactoryCreated(SessionFactory factory) {}
+
+            public void sessionFactoryCreated(SessionFactory factory) {
+            }
+
             public void sessionFactoryClosed(SessionFactory factory) {
                 if (serviceRegistry != null) {
-                    ((ServiceRegistryImplementor)serviceRegistry).destroy();
+                    ((ServiceRegistryImplementor) serviceRegistry).destroy();
                 }
             }
-        });
+        };
+        setSessionFactoryObserver(sessionFactoryObserver);
 
         StandardServiceRegistryBuilder standardServiceRegistryBuilder = createStandardServiceRegistryBuilder(bootstrapServiceRegistry)
                                                                                     .applySettings(getProperties());
@@ -330,16 +334,6 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
     }
 
 
-    @Override
-    protected void reset() {
-        super.reset();
-        try {
-            GrailsIdentifierGeneratorFactory.applyNewInstance(this);
-        }
-        catch (Exception e) {
-            // ignore exception
-        }
-    }
 
     public void setMetadataContributor(MetadataContributor metadataContributor) {
         this.metadataContributor = metadataContributor;

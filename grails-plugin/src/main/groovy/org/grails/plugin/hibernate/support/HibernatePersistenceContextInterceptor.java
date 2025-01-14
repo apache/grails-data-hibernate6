@@ -64,51 +64,15 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
      * @see org.apache.groovy.grails.support.PersistenceContextInterceptor#destroy()
      */
     public void destroy() {
-        DeferredBindingActions.clear();
-        if(!disconnected.isEmpty()) {
-            disconnected.pop();
-        }
-        if (getSessionFactory() == null || decNestingCount() > 0 || getParticipate()) {
-            return;
-        }
 
-        // single session mode
-        SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.unbindResource(getSessionFactory());
-        LOG.debug("Closing single Hibernate session in GrailsDispatcherServlet");
-        try {
-            disconnected.clear();
-            SessionFactoryUtils.closeSession(holder.getSession());
-        }
-        catch (RuntimeException ex) {
-            LOG.error("Unexpected exception on closing Hibernate Session", ex);
-        }
     }
 
     public void disconnect() {
-        if (getSessionFactory() == null) return;
-        try {
-            disconnected.add(
-                    getSession(false).disconnect()
-            );
 
-        }
-        catch (Exception e) {
-            // no session ignore
-        }
     }
 
     public void reconnect() {
-        if (getSessionFactory() == null) return;
-        Session session = getSession();
-        if(!session.isConnected() && !disconnected.isEmpty()) {
-            try {
-                Connection connection = disconnected.peekLast();
-                getSession().reconnect(connection);
-            } catch (IllegalStateException e) {
-                // cannot reconnect on different exception. ignore
-                LOG.debug(e.getMessage(),e);
-            }
-        }
+
     }
 
     public void flush() {

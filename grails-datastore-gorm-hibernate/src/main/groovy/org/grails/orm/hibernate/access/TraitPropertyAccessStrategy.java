@@ -1,5 +1,8 @@
 package org.grails.orm.hibernate.access;
 
+import org.checkerframework.checker.initialization.qual.Initialized;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.UnknownKeyFor;
 import org.codehaus.groovy.transform.trait.Traits;
 import org.grails.datastore.mapping.reflect.NameUtils;
 import org.hibernate.property.access.spi.*;
@@ -15,7 +18,7 @@ import java.lang.reflect.Method;
  * @since 6.1.3
  */
 public class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
-    @Override
+
     public PropertyAccess buildPropertyAccess(Class containerJavaType, String propertyName) {
         Method readMethod = ReflectionUtils.findMethod(containerJavaType, NameUtils.getGetterName(propertyName));
         if(readMethod == null) {
@@ -82,5 +85,10 @@ public class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
 
     private String getTraitFieldName(Class traitClass, String fieldName) {
         return traitClass.getName().replace('.','_') + "__" + fieldName;
+    }
+
+    @java.lang.Override
+    public @UnknownKeyFor @NonNull @Initialized PropertyAccess buildPropertyAccess(java.lang.@UnknownKeyFor @NonNull @Initialized Class<@UnknownKeyFor @NonNull @Initialized ?> containerJavaType, java.lang.@UnknownKeyFor @NonNull @Initialized String propertyName, @UnknownKeyFor @NonNull @Initialized boolean setterRequired) {
+        return buildPropertyAccess(containerJavaType,propertyName );
     }
 }

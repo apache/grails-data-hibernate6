@@ -17,8 +17,11 @@ package org.grails.orm.hibernate.cfg;
 
 import org.hibernate.HibernateException;
 import org.hibernate.MappingException;
+import org.hibernate.dialect.Dialect;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.type.AbstractStandardBasicType;
+import org.hibernate.type.descriptor.converter.spi.BasicValueConverter;
+import org.hibernate.type.descriptor.jdbc.JdbcType;
 import org.hibernate.type.spi.TypeConfiguration;
 import org.hibernate.usertype.ParameterizedType;
 import org.hibernate.usertype.UserType;
@@ -88,7 +91,7 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
             if (LOG.isDebugEnabled()) {
                 LOG.debug(String.format("Mapped Basic Type is %s", type));
             }
-            sqlTypes = type.sqlTypes(null);
+            sqlTypes = type.getSqlTypeCodes(null);
         }
         catch (Exception e) {
             throw new MappingException("Error mapping Enum Class using IdentifierEnumType", e);
@@ -97,6 +100,11 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
 
     public int[] sqlTypes() {
         return sqlTypes;
+    }
+
+    @Override
+    public int getSqlType() {
+        return 0;
     }
 
     public Class<?> returnedClass() {
@@ -112,13 +120,12 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
     }
 
     @Override
-    public Object nullSafeGet(ResultSet rs, String[] names, SharedSessionContractImplementor session, Object owner) throws HibernateException, SQLException {
-        Object id = type.nullSafeGet(rs, names[0], session);
-        if ((!rs.wasNull()) && id != null) {
-            return bidiMap.getEnumValue(id);
-        }
-        return null;
+    public Object nullSafeGet(ResultSet rs, int position, SharedSessionContractImplementor session, Object owner) throws SQLException {
+        Object result = rs.getObject(position, returnedClass());
+        return rs.wasNull() ? null : result;
     }
+
+
 
     @Override
     public void nullSafeSet(PreparedStatement st, Object value, int index, SharedSessionContractImplementor session) throws HibernateException, SQLException {
@@ -148,6 +155,31 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
 
     public Object replace(Object orig, Object target, Object owner) throws HibernateException {
         return orig;
+    }
+
+    @Override
+    public long getDefaultSqlLength(Dialect dialect, JdbcType jdbcType) {
+        return UserType.super.getDefaultSqlLength(dialect, jdbcType);
+    }
+
+    @Override
+    public int getDefaultSqlPrecision(Dialect dialect, JdbcType jdbcType) {
+        return UserType.super.getDefaultSqlPrecision(dialect, jdbcType);
+    }
+
+    @Override
+    public int getDefaultSqlScale(Dialect dialect, JdbcType jdbcType) {
+        return UserType.super.getDefaultSqlScale(dialect, jdbcType);
+    }
+
+    @Override
+    public JdbcType getJdbcType(TypeConfiguration typeConfiguration) {
+        return UserType.super.getJdbcType(typeConfiguration);
+    }
+
+    @Override
+    public BasicValueConverter getValueConverter() {
+        return UserType.super.getValueConverter();
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})

@@ -18,6 +18,7 @@ package org.grails.orm.hibernate
 import grails.gorm.validation.CascadingValidator
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import jakarta.persistence.FlushModeType
 import org.grails.datastore.gorm.GormValidateable
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
@@ -80,7 +81,6 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     protected SessionFactory sessionFactory
     protected ClassLoader classLoader
     protected IHibernateTemplate hibernateTemplate
-    protected ProxyHandler proxyHandler
 
     boolean autoFlush
 
@@ -89,7 +89,6 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         this.classLoader = classLoader
         sessionFactory = datastore.getSessionFactory()
         this.hibernateTemplate = hibernateTemplate
-        this.proxyHandler = datastore.mappingContext.getProxyHandler()
         this.autoFlush = datastore.autoFlush
         this.failOnError = datastore.failOnError
         this.markDirty = datastore.markDirty
@@ -207,7 +206,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         catch (DataAccessException e) {
             try {
                 hibernateTemplate.execute { Session session ->
-                    session.flushMode = FlushMode.MANUAL
+                    session.flushMode = FlushModeType.COMMIT
                 }
             }
             finally {
@@ -223,7 +222,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     @Override
     boolean instanceOf(D instance, Class cls) {
-        return proxyHandler.unwrap(instance) in cls
+        return super.instanceOf(instance, cls)
     }
 
     @Override
@@ -286,7 +285,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             session.flush()
         } catch (HibernateException e) {
             // session should not be flushed again after a data access exception!
-            session.setFlushMode FlushMode.MANUAL
+            session.setFlushMode FlushModeType.COMMIT
             throw e
         }
     }
@@ -392,13 +391,11 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         if (entity) {
             for (Association association in entity.associations) {
                 if (association instanceof ToOne && !association instanceof Embedded) {
-                    if(proxyHandler.isInitialized(target, association.name)) {
                         def bean = new BeanWrapperImpl(target)
                         def propertyValue = bean.getPropertyValue(association.name)
                         if (propertyValue != null) {
                             setObjectToReadOnly propertyValue
                         }
-                    }
                 }
             }
         }
@@ -416,10 +413,9 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
      */
     void setObjectToReadOnly(Object target) {
         hibernateTemplate.execute { Session session ->
-            if (session.contains(target) && proxyHandler.isInitialized(target)) {
-                target = proxyHandler.unwrap(target)
+            if (session.contains(target)) {
                 session.setReadOnly target, true
-                session.flushMode = FlushMode.MANUAL
+                session.flushMode = FlushModeType.COMMIT
             }
         }
     }

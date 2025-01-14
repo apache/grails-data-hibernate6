@@ -9,7 +9,10 @@ version = rootProject.version
 group = 'examples'
 
 dependencies {
-    implementation platform("org.grails:grails-bom:$grailsVersion")
+    implementation("org.hibernate.orm:hibernate-core:$hibernateVersion")
+    implementation platform("org.grails:grails-bom:$grailsVersion") ,{
+        exclude group:'org.hibernate', module:'hibernate-core-jakarta'
+    }
 
     implementation project(':grails-plugin')
     implementation 'org.grails:grails-core'

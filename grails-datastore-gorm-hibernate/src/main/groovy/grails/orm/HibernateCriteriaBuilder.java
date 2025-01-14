@@ -16,30 +16,33 @@
 package grails.orm;
 
 import groovy.lang.GroovySystem;
-import org.grails.datastore.mapping.model.PersistentEntity;
+import jakarta.persistence.metamodel.Attribute;
+import jakarta.persistence.metamodel.PluralAttribute;
+import org.grails.datastore.mapping.query.api.Criteria;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
 import org.grails.orm.hibernate.HibernateDatastore;
-import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
-import org.grails.orm.hibernate.query.*;
-import org.grails.datastore.mapping.query.api.QueryableCriteria;
-import org.hibernate.Criteria;
-import org.hibernate.HibernateException;
+import org.grails.orm.hibernate.query.AbstractHibernateCriteriaBuilder;
 import org.hibernate.SessionFactory;
-import org.hibernate.criterion.Criterion;
-import org.hibernate.criterion.Projection;
-import org.hibernate.criterion.ProjectionList;
-import org.hibernate.criterion.Projections;
-import org.hibernate.engine.spi.SessionFactoryImplementor;
-import org.hibernate.sql.JoinType;
+import org.hibernate.type.BasicTypeReference;
 import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
 import org.springframework.orm.hibernate5.SessionHolder;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import jakarta.persistence.metamodel.Attribute;
-import jakarta.persistence.metamodel.PluralAttribute;
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.net.URL;
+import java.sql.Blob;
+import java.sql.Clob;
+import java.util.Calendar;
+import java.util.Currency;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.TimeZone;
+import java.util.UUID;
 
 /**
  * <p>Wraps the Hibernate Criteria API in a builder. The builder can be retrieved through the "createCriteria()" dynamic static
@@ -73,43 +76,43 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
      * Define constants which may be used inside of criteria queries
      * to refer to standard Hibernate Type instances.
      */
-    public static final Type BOOLEAN = StandardBasicTypes.BOOLEAN;
-    public static final Type YES_NO = StandardBasicTypes.YES_NO;
-    public static final Type BYTE = StandardBasicTypes.BYTE;
-    public static final Type CHARACTER = StandardBasicTypes.CHARACTER;
-    public static final Type SHORT = StandardBasicTypes.SHORT;
-    public static final Type INTEGER = StandardBasicTypes.INTEGER;
-    public static final Type LONG = StandardBasicTypes.LONG;
-    public static final Type FLOAT = StandardBasicTypes.FLOAT;
-    public static final Type DOUBLE = StandardBasicTypes.DOUBLE;
-    public static final Type BIG_DECIMAL = StandardBasicTypes.BIG_DECIMAL;
-    public static final Type BIG_INTEGER = StandardBasicTypes.BIG_INTEGER;
-    public static final Type STRING = StandardBasicTypes.STRING;
-    public static final Type NUMERIC_BOOLEAN = StandardBasicTypes.NUMERIC_BOOLEAN;
-    public static final Type TRUE_FALSE = StandardBasicTypes.TRUE_FALSE;
-    public static final Type URL = StandardBasicTypes.URL;
-    public static final Type TIME = StandardBasicTypes.TIME;
-    public static final Type DATE = StandardBasicTypes.DATE;
-    public static final Type TIMESTAMP = StandardBasicTypes.TIMESTAMP;
-    public static final Type CALENDAR = StandardBasicTypes.CALENDAR;
-    public static final Type CALENDAR_DATE = StandardBasicTypes.CALENDAR_DATE;
-    public static final Type CLASS = StandardBasicTypes.CLASS;
-    public static final Type LOCALE = StandardBasicTypes.LOCALE;
-    public static final Type CURRENCY = StandardBasicTypes.CURRENCY;
-    public static final Type TIMEZONE = StandardBasicTypes.TIMEZONE;
-    public static final Type UUID_BINARY = StandardBasicTypes.UUID_BINARY;
-    public static final Type UUID_CHAR = StandardBasicTypes.UUID_CHAR;
-    public static final Type BINARY = StandardBasicTypes.BINARY;
-    public static final Type WRAPPER_BINARY = StandardBasicTypes.WRAPPER_BINARY;
-    public static final Type IMAGE = StandardBasicTypes.IMAGE;
-    public static final Type BLOB = StandardBasicTypes.BLOB;
-    public static final Type MATERIALIZED_BLOB = StandardBasicTypes.MATERIALIZED_BLOB;
-    public static final Type CHAR_ARRAY = StandardBasicTypes.CHAR_ARRAY;
-    public static final Type CHARACTER_ARRAY = StandardBasicTypes.CHARACTER_ARRAY;
-    public static final Type TEXT = StandardBasicTypes.TEXT;
-    public static final Type CLOB = StandardBasicTypes.CLOB;
-    public static final Type MATERIALIZED_CLOB = StandardBasicTypes.MATERIALIZED_CLOB;
-    public static final Type SERIALIZABLE = StandardBasicTypes.SERIALIZABLE;
+    public static final BasicTypeReference<Boolean> BOOLEAN = StandardBasicTypes.BOOLEAN;
+    public static final BasicTypeReference<Boolean> YES_NO = StandardBasicTypes.YES_NO;
+    public static final BasicTypeReference<Byte> BYTE = StandardBasicTypes.BYTE;
+    public static final BasicTypeReference<Character> CHARACTER = StandardBasicTypes.CHARACTER;
+    public static final BasicTypeReference<Short> SHORT = StandardBasicTypes.SHORT;
+    public static final BasicTypeReference<Integer> INTEGER = StandardBasicTypes.INTEGER;
+    public static final BasicTypeReference<Long> LONG = StandardBasicTypes.LONG;
+    public static final BasicTypeReference<Float> FLOAT = StandardBasicTypes.FLOAT;
+    public static final BasicTypeReference<Double> DOUBLE = StandardBasicTypes.DOUBLE;
+    public static final BasicTypeReference<BigDecimal> BIG_DECIMAL = StandardBasicTypes.BIG_DECIMAL;
+    public static final BasicTypeReference<BigInteger> BIG_INTEGER = StandardBasicTypes.BIG_INTEGER;
+    public static final BasicTypeReference<String> STRING = StandardBasicTypes.STRING;
+    public static final BasicTypeReference<Boolean> NUMERIC_BOOLEAN = StandardBasicTypes.NUMERIC_BOOLEAN;
+    public static final BasicTypeReference<Boolean> TRUE_FALSE = StandardBasicTypes.TRUE_FALSE;
+    public static final BasicTypeReference<java.net.URL> URL = StandardBasicTypes.URL;
+    public static final BasicTypeReference<Date> TIME = StandardBasicTypes.TIME;
+    public static final BasicTypeReference<Date> DATE = StandardBasicTypes.DATE;
+    public static final BasicTypeReference<Date> TIMESTAMP = StandardBasicTypes.TIMESTAMP;
+    public static final BasicTypeReference<Calendar> CALENDAR = StandardBasicTypes.CALENDAR;
+    public static final BasicTypeReference<Calendar> CALENDAR_DATE = StandardBasicTypes.CALENDAR_DATE;
+    public static final BasicTypeReference<Class> CLASS = StandardBasicTypes.CLASS;
+    public static final BasicTypeReference<Locale> LOCALE = StandardBasicTypes.LOCALE;
+    public static final BasicTypeReference<Currency> CURRENCY = StandardBasicTypes.CURRENCY;
+    public static final BasicTypeReference<TimeZone> TIMEZONE = StandardBasicTypes.TIMEZONE;
+    public static final BasicTypeReference<UUID> UUID_BINARY = StandardBasicTypes.UUID_BINARY;
+    public static final BasicTypeReference<UUID> UUID_CHAR = StandardBasicTypes.UUID_CHAR;
+    public static final BasicTypeReference<byte[]> BINARY = StandardBasicTypes.BINARY;
+    public static final BasicTypeReference<Byte[]> WRAPPER_BINARY = StandardBasicTypes.WRAPPER_BINARY;
+    public static final BasicTypeReference<byte[]> IMAGE = StandardBasicTypes.IMAGE;
+    public static final BasicTypeReference<Blob> BLOB = StandardBasicTypes.BLOB;
+    public static final BasicTypeReference<byte[]> MATERIALIZED_BLOB = StandardBasicTypes.MATERIALIZED_BLOB;
+    public static final BasicTypeReference<char[]> CHAR_ARRAY = StandardBasicTypes.CHAR_ARRAY;
+    public static final BasicTypeReference<Character[]> CHARACTER_ARRAY = StandardBasicTypes.CHARACTER_ARRAY;
+    public static final BasicTypeReference<String> TEXT = StandardBasicTypes.TEXT;
+    public static final BasicTypeReference<Clob> CLOB = StandardBasicTypes.CLOB;
+    public static final BasicTypeReference<String> MATERIALIZED_CLOB = StandardBasicTypes.MATERIALIZED_CLOB;
+    public static final BasicTypeReference<Serializable> SERIALIZABLE = StandardBasicTypes.SERIALIZABLE;
 
     @SuppressWarnings("rawtypes")
     public HibernateCriteriaBuilder(Class targetClass, SessionFactory sessionFactory) {
@@ -123,32 +126,9 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
         setDefaultFlushMode(GrailsHibernateTemplate.FLUSH_AUTO);
     }
 
-    /**
-     * Join an association using the specified join-type, assigning an alias
-     * to the joined association.
-     * The joinType is expected to be one of CriteriaSpecification.INNER_JOIN (the default),
-     * CriteriaSpecificationFULL_JOIN, or CriteriaSpecificationLEFT_JOIN.
-     *
-     * @param associationPath A dot-seperated property path
-     * @param alias           The alias to assign to the joined association (for later reference).
-     * @param joinType        The type of join to use.
-     * @return this (for method chaining)
-     * @throws HibernateException Indicates a problem creating the sub criteria
-     * @see #createAlias(String, String)
-     */
-    public Criteria createAlias(String associationPath, String alias, int joinType) {
-        return criteria.createAlias(associationPath, alias, JoinType.parse(joinType));
-    }
 
-    @Override
-    protected Object executeUniqueResultWithProxyUnwrap() {
-        return GrailsHibernateUtil.unwrapIfProxy(criteria.uniqueResult());
-    }
 
-    @Override
-    protected void cacheCriteriaMapping() {
-        GrailsHibernateUtil.cacheCriteriaByMapping(datastore, targetClass, criteria);
-    }
+
 
     protected Class getClassForAssociationType(Attribute<?, ?> type) {
         if (type instanceof PluralAttribute) {
@@ -159,29 +139,11 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
 
     @Override
     protected List createPagedResultList(Map args) {
-        GrailsHibernateUtil.populateArgumentsForCriteria(datastore, targetClass, criteria, args, conversionService);
         GrailsHibernateTemplate ght = new GrailsHibernateTemplate(sessionFactory, (HibernateDatastore) datastore, getDefaultFlushMode());
-        return new PagedResultList(ght, criteria);
+        return null;
     }
 
-    /**
-     * Creates a Criterion with from the specified property name and "rlike" (a regular expression version of "like") expression
-     *
-     * @param propertyName  The property name
-     * @param propertyValue The ilike value
-     * @return A Criterion instance
-     */
-    public org.grails.datastore.mapping.query.api.Criteria rlike(String propertyName, Object propertyValue) {
-        if (!validateSimpleExpression()) {
-            throwRuntimeException(new IllegalArgumentException("Call to [rlike] with propertyName [" +
-                    propertyName + "] and value [" + propertyValue + "] not allowed here."));
-        }
 
-        propertyName = calculatePropertyName(propertyName);
-        propertyValue = calculatePropertyValue(propertyValue);
-        addToCriteria(new RlikeExpression(propertyName, propertyValue));
-        return this;
-    }
 
     @Override
     protected void createCriteriaInstance() {
@@ -193,57 +155,16 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
             else {
                 hibernateSession = sessionFactory.openSession();
             }
-
-            criteria = hibernateSession.createCriteria(targetClass);
+            criteria = hibernateSession.getCriteriaBuilder().createQuery(targetClass);
             cacheCriteriaMapping();
             criteriaMetaClass = GroovySystem.getMetaClassRegistry().getMetaClass(criteria.getClass());
         }
     }
 
-    @Override
-    protected org.hibernate.criterion.DetachedCriteria convertToHibernateCriteria(QueryableCriteria<?> queryableCriteria) {
-        return getHibernateDetachedCriteria(new HibernateQuery(criteria, queryableCriteria.getPersistentEntity()), queryableCriteria);
+    protected void cacheCriteriaMapping() {
+
     }
 
-    public static org.hibernate.criterion.DetachedCriteria getHibernateDetachedCriteria(AbstractHibernateQuery query, QueryableCriteria<?> queryableCriteria) {
-        String alias = queryableCriteria.getAlias();
-        return getHibernateDetachedCriteria(query, queryableCriteria, alias);
-    }
-
-    public static org.hibernate.criterion.DetachedCriteria getHibernateDetachedCriteria(AbstractHibernateQuery query, QueryableCriteria<?> queryableCriteria, String alias) {
-        PersistentEntity persistentEntity = queryableCriteria.getPersistentEntity();
-        Class targetClass = persistentEntity.getJavaClass();
-        org.hibernate.criterion.DetachedCriteria detachedCriteria;
-
-        if(alias != null) {
-            detachedCriteria = org.hibernate.criterion.DetachedCriteria.forClass(targetClass, alias);
-        }
-        else {
-            detachedCriteria = org.hibernate.criterion.DetachedCriteria.forClass(targetClass);
-        }
-        populateHibernateDetachedCriteria(new HibernateQuery(detachedCriteria,persistentEntity), detachedCriteria, queryableCriteria);
-        return detachedCriteria;
-    }
-
-    private static void populateHibernateDetachedCriteria(AbstractHibernateQuery query, org.hibernate.criterion.DetachedCriteria detachedCriteria, QueryableCriteria<?> queryableCriteria) {
-        List<org.grails.datastore.mapping.query.Query.Criterion> criteriaList = queryableCriteria.getCriteria();
-        for (org.grails.datastore.mapping.query.Query.Criterion criterion : criteriaList) {
-            Criterion hibernateCriterion = HibernateQuery.HIBERNATE_CRITERION_ADAPTER.toHibernateCriterion(query, criterion, null);
-            if (hibernateCriterion != null) {
-                detachedCriteria.add(hibernateCriterion);
-            }
-        }
-
-        List<org.grails.datastore.mapping.query.Query.Projection> projections = queryableCriteria.getProjections();
-        ProjectionList projectionList = Projections.projectionList();
-        for (org.grails.datastore.mapping.query.Query.Projection projection : projections) {
-            Projection hibernateProjection = new HibernateProjectionAdapter(projection).toHibernateProjection();
-            if (hibernateProjection != null) {
-                projectionList.add(hibernateProjection);
-            }
-        }
-        detachedCriteria.setProjection(projectionList);
-    }
 
     /**
      * Closes the session if it is copen
@@ -254,5 +175,6 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
             hibernateSession.close();
         }
     }
+
 
 }

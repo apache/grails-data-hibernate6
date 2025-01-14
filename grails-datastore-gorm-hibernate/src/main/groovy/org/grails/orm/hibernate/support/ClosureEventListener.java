@@ -181,10 +181,10 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
         });
     }
 
-    @Override
-    public boolean requiresPostCommitHanding(EntityPersister persister) {
-        return false;
-    }
+//    @Override
+//    public boolean requiresPostCommitHanding(EntityPersister persister) {
+//        return false;
+//    }
 
     @Override
     public boolean requiresPostCommitHandling(EntityPersister persister) {

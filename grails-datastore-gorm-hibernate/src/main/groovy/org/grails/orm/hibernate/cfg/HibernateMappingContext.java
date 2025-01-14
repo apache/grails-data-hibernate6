@@ -28,7 +28,6 @@ import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.config.JpaMappingConfigurationStrategy;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
-import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 import org.springframework.validation.Errors;
 
 import java.lang.annotation.Annotation;
@@ -69,7 +68,6 @@ public class HibernateMappingContext extends AbstractMappingContext {
                 return !Errors.class.isAssignableFrom(propertyType);
             }
         };
-        this.proxyFactory = new HibernateProxyHandler();
         addPersistentEntities(persistentClasses);
     }
 
