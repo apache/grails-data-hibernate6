@@ -22,7 +22,6 @@ import org.grails.orm.hibernate.AbstractHibernateSession;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.hibernate.SessionFactory;
-import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.persister.entity.PropertyMapping;
 
@@ -56,7 +55,7 @@ public class HibernateQuery extends AbstractHibernateQuery {
      * @return The hibernate criteria
      */
     public CriteriaQuery getHibernateCriteria() {
-        return this.criteria;
+        return this.criteriaQuery;
     }
 
 

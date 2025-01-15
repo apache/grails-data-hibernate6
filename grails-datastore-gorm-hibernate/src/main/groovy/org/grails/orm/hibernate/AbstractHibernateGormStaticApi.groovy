@@ -173,7 +173,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
     Integer count() {
         (Integer)hibernateTemplate.execute({ Session session ->
             CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder()
-            CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(persistentEntity.javaClass)
+            CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(Long.class)
             criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(persistentEntity.javaClass)))
             Query criteria = session.createQuery(criteriaQuery)
             HibernateHqlQuery hibernateHqlQuery = new HibernateHqlQuery(
@@ -583,9 +583,9 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             CriteriaQuery cq = cb.createQuery(persistentEntity.javaClass)
             def root = cq.from(persistentEntity.javaClass)
             def listOfPredicates = queryArgs.collect { entry -> cb.equal(root.get(entry.key), entry.value) }
-            def nullPredicates = nullNames.collect { nullName -> root.get(nullName).isNull() }
+            def nullPredicates = nullNames.collect { nullName -> cb.isNotNull(root.get(nullName))}
             def jpaPredicates = (listOfPredicates + nullPredicates).<JpaPredicate>toArray(new JpaPredicate[0])
-            cq.where(cb.and(jpaPredicates))
+            cq.select(root).where(cb.and(jpaPredicates))
             firePreQueryEvent(session, cq)
             List results = session.createQuery(cq).resultList
             firePostQueryEvent(session, cq, results)
@@ -654,9 +654,9 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             CriteriaQuery cq = cb.createQuery(persistentEntity.javaClass)
             def root = cq.from(persistentEntity.javaClass)
             def listOfPredicates = queryArgs.collect { entry -> cb.equal(root.get(entry.key), entry.value) }
-            def nullPredicates = nullNames.collect { nullName -> root.get(nullName).isNull() }
+            def nullPredicates = nullNames.collect { nullName -> cb.isNotNull(root.get(nullName)) }
             JpaPredicate[] jpaPredicates = (listOfPredicates + nullPredicates).<JpaPredicate>toArray(new JpaPredicate[0])
-            cq.where(cb.and(jpaPredicates))
+            cq.select(root).where(cb.and(jpaPredicates))
             firePreQueryEvent(session, cq)
             Object result = session.createQuery(cq).singleResult
             firePostQueryEvent(session, cq, result)

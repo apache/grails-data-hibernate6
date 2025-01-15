@@ -16,50 +16,33 @@ package org.grails.orm.hibernate.query;
 
 import jakarta.persistence.FetchType;
 import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Root;
-import org.grails.datastore.gorm.finders.DynamicFinder;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
-import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.Embedded;
-import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Query;
-import org.grails.datastore.mapping.query.api.QueryableCriteria;
-import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion;
-import org.grails.datastore.mapping.query.event.PostQueryEvent;
-import org.grails.datastore.mapping.query.event.PreQueryEvent;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 import org.grails.orm.hibernate.IHibernateTemplate;
-import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder;
-import org.grails.orm.hibernate.cfg.Mapping;
-import org.hibernate.FetchMode;
-import org.hibernate.LockMode;
-import org.hibernate.NonUniqueResultException;
 import org.hibernate.SessionFactory;
-import org.hibernate.dialect.Dialect;
 import org.hibernate.persister.entity.PropertyMapping;
+import org.hibernate.query.criteria.HibernateCriteriaBuilder;
+import org.hibernate.query.criteria.JpaPredicate;
 import org.hibernate.query.sqm.tree.SqmJoinType;
-import org.hibernate.type.BasicType;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
-import org.springframework.dao.InvalidDataAccessResourceUsageException;
-import org.springframework.util.ReflectionUtils;
 
-import java.lang.reflect.Field;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 /**
  * Bridges the Query API with the Hibernate Criteria API
@@ -76,9 +59,9 @@ public abstract class AbstractHibernateQuery extends Query {
     protected static ConversionService conversionService = new DefaultConversionService();
 
     private static final Map<String, Boolean> JOIN_STATUS_CACHE = new ConcurrentHashMap<String, Boolean>();
-    protected final Root root;
+    protected Root root;
 
-    protected CriteriaQuery criteria;
+    protected CriteriaQuery criteriaQuery;
     protected AbstractHibernateQuery.HibernateProjectionList hibernateProjectionList;
     protected String alias;
     protected int aliasCount;
@@ -89,10 +72,9 @@ public abstract class AbstractHibernateQuery extends Query {
     protected LinkedList aliasInstanceStack = new LinkedList();
     private boolean hasJoins = false;
 
-    protected AbstractHibernateQuery(CriteriaQuery criteria, AbstractHibernateSession session, PersistentEntity entity) {
+
+    protected AbstractHibernateQuery(CriteriaQuery criteriaQuery, AbstractHibernateSession session, PersistentEntity entity) {
         super(session, entity);
-        this.criteria = criteria;
-        this.root = criteria.from(entity.getJavaClass());
         if(entity != null) {
             initializeJoinStatus();
         }
@@ -141,10 +123,7 @@ public abstract class AbstractHibernateQuery extends Query {
         return this;
     }
 
-    @Override
-    public void add(Criterion criterion) {
 
-    }
 
 
     @Override
@@ -323,7 +302,7 @@ public abstract class AbstractHibernateQuery extends Query {
     protected CriteriaAndAlias getOrCreateAlias(String associationName, String alias) {
         CriteriaAndAlias subCriteria = null;
         String associationPath = getAssociationPath(associationName);
-        CriteriaQuery parentCriteria = criteria;
+        CriteriaQuery parentCriteria = criteriaQuery;
         if(alias == null) {
             alias = generateAlias(associationName);
         }
@@ -371,14 +350,6 @@ public abstract class AbstractHibernateQuery extends Query {
     }
 
     @Override
-    public ProjectionList projections() {
-        if (hibernateProjectionList == null) {
-            hibernateProjectionList = new HibernateProjectionList();
-        }
-        return hibernateProjectionList;
-    }
-
-    @Override
     public Query max(int max) {
         return this;
     }
@@ -412,15 +383,8 @@ public abstract class AbstractHibernateQuery extends Query {
     @Override
     public Query order(Order order) {
         super.order(order);
-
-
-
         return this;
     }
-
-
-
-
 
     @Override
     public Query join(String property) {
@@ -432,13 +396,15 @@ public abstract class AbstractHibernateQuery extends Query {
     @Override
     public Query select(String property) {
         this.hasJoins = true;
-        this.criteria.select(root.get(property));
+        this.criteriaQuery.select(root.get(property));
         return this;
     }
 
     @Override
     public List list() {
-       return getQuery().getResultList();
+        org.hibernate.query.Query query = getQuery();
+        System.out.println(query.getQueryString());
+        return query.getResultList();
     }
 
 
@@ -453,8 +419,47 @@ public abstract class AbstractHibernateQuery extends Query {
         return  getQuery().getSingleResult();
     }
 
+    private final Predicate<Projection> countProjectionPredicate = projection -> projection instanceof CountProjection;
+
+    @SuppressWarnings("unchecked")
+    Predicate<Projection>[] projectionPredicates = new Predicate[] {countProjectionPredicate} ;
+
+    @SafeVarargs
+    private static <T> Predicate<T> combinePredicates(Predicate<T>... predicates) {
+        return Arrays.stream(predicates)
+                .reduce(Predicate::and)
+                .orElse(x -> true);
+    }
+
     private org.hibernate.query.Query getQuery() {
-        return ((IHibernateTemplate) session.getNativeInterface()).getSessionFactory().getCurrentSession().createQuery(criteria);
+        List<Projection> projections = projections()
+                .getProjectionList()
+                .stream()
+                .filter(combinePredicates(projectionPredicates)).toList();
+        if (projections.size() == 1  && projections.get(0) instanceof CountProjection) {
+            criteriaQuery = getCriteriaBuilder().createQuery(Long.class);
+            root = criteriaQuery.from(entity.getJavaClass());
+            criteriaQuery.select(getCriteriaBuilder().count(root));
+        } else {
+            criteriaQuery = getCriteriaBuilder().createQuery(entity.getJavaClass());
+            root = criteriaQuery.from(entity.getJavaClass());
+            criteriaQuery.select(root);
+        }
+
+        List<JpaPredicate> predicates = this.criteria.getCriteria().stream().
+            map(criterion -> {
+                if (criterion instanceof IsNotNull isNotNull) {
+                    return getCriteriaBuilder().isNotNull(root.get(isNotNull.getProperty()));
+                }
+                return null;
+            }).filter(Objects::nonNull).toList();
+
+        criteriaQuery.where(getCriteriaBuilder().and(predicates.toArray(new JpaPredicate[0])));
+        return ((IHibernateTemplate) session.getNativeInterface()).getSessionFactory().getCurrentSession().createQuery(criteriaQuery);
+    }
+
+    private HibernateCriteriaBuilder getCriteriaBuilder() {
+        return ((IHibernateTemplate) session.getNativeInterface()).getSessionFactory().getCriteriaBuilder();
     }
 
 
