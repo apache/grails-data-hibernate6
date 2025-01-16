@@ -14,6 +14,7 @@
  */
 package org.grails.orm.hibernate.query;
 
+import groovy.util.logging.Slf4j;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.JoinType;
@@ -51,6 +52,7 @@ import java.util.function.Predicate;
  * @since 1.0
  */
 @SuppressWarnings("rawtypes")
+@Slf4j
 public abstract class AbstractHibernateQuery extends Query {
 
     public static final String SIZE_CONSTRAINT_PREFIX = "Size";
@@ -62,7 +64,6 @@ public abstract class AbstractHibernateQuery extends Query {
     protected Root root;
 
     protected CriteriaQuery criteriaQuery;
-    protected AbstractHibernateQuery.HibernateProjectionList hibernateProjectionList;
     protected String alias;
     protected int aliasCount;
     protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<String, CriteriaAndAlias>();
@@ -350,21 +351,6 @@ public abstract class AbstractHibernateQuery extends Query {
     }
 
     @Override
-    public Query max(int max) {
-        return this;
-    }
-
-    @Override
-    public Query maxResults(int max) {
-        return this;
-    }
-
-    @Override
-    public Query offset(int offset) {
-        return this;
-    }
-
-    @Override
     public Query firstResult(int offset) {
         offset(offset);
         return this;
@@ -402,9 +388,7 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public List list() {
-        org.hibernate.query.Query query = getQuery();
-        System.out.println(query.getQueryString());
-        return query.getResultList();
+        return getQuery().getResultList();
     }
 
 
@@ -432,34 +416,45 @@ public abstract class AbstractHibernateQuery extends Query {
     }
 
     private org.hibernate.query.Query getQuery() {
+        HibernateCriteriaBuilder cb = getCriteriaBuilder();
         List<Projection> projections = projections()
                 .getProjectionList()
                 .stream()
                 .filter(combinePredicates(projectionPredicates)).toList();
         if (projections.size() == 1  && projections.get(0) instanceof CountProjection) {
-            criteriaQuery = getCriteriaBuilder().createQuery(Long.class);
+            criteriaQuery = cb.createQuery(Long.class);
             root = criteriaQuery.from(entity.getJavaClass());
-            criteriaQuery.select(getCriteriaBuilder().count(root));
+            criteriaQuery.select(cb.count(root));
         } else {
-            criteriaQuery = getCriteriaBuilder().createQuery(entity.getJavaClass());
+            criteriaQuery = cb.createQuery(entity.getJavaClass());
             root = criteriaQuery.from(entity.getJavaClass());
             criteriaQuery.select(root);
         }
 
         List<JpaPredicate> predicates = this.criteria.getCriteria().stream().
             map(criterion -> {
-                if (criterion instanceof IsNotNull isNotNull) {
-                    return getCriteriaBuilder().isNotNull(root.get(isNotNull.getProperty()));
+                if (criterion instanceof IsNotNull c) {
+                    return cb.isNotNull(root.get(c.getProperty()));
+                } else if (criterion instanceof Equals c ) {
+                    return cb.equal(root.get(c.getProperty()),c.getValue());
                 }
                 return null;
             }).filter(Objects::nonNull).toList();
 
-        criteriaQuery.where(getCriteriaBuilder().and(predicates.toArray(new JpaPredicate[0])));
-        return ((IHibernateTemplate) session.getNativeInterface()).getSessionFactory().getCurrentSession().createQuery(criteriaQuery);
+        criteriaQuery.where(cb.and(predicates.toArray(new JpaPredicate[0])));
+        return getSessionFactory()
+                .getCurrentSession()
+                .createQuery(criteriaQuery)
+                .setMaxResults(this.max)
+                .setFirstResult(this.offset);
+    }
+
+    private SessionFactory getSessionFactory() {
+        return ((IHibernateTemplate) session.getNativeInterface()).getSessionFactory();
     }
 
     private HibernateCriteriaBuilder getCriteriaBuilder() {
-        return ((IHibernateTemplate) session.getNativeInterface()).getSessionFactory().getCriteriaBuilder();
+        return getSessionFactory().getCriteriaBuilder();
     }
 
 
@@ -482,87 +477,6 @@ public abstract class AbstractHibernateQuery extends Query {
         return calculatePropertyName(associationName) + calculatePropertyName(ALIAS) + aliasCount++;
     }
 
-
-
-
-
-
-    protected class HibernateProjectionList extends ProjectionList {
-
-        private boolean rowCount = false;
-
-        public boolean isRowCount() {
-            return rowCount;
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return true;
-        }
-
-
-        @Override
-        public ProjectionList add(Projection p) {
-            return this;
-        }
-
-        @Override
-        public org.grails.datastore.mapping.query.api.ProjectionList countDistinct(String property) {
-            return this;
-        }
-
-        @Override
-        public org.grails.datastore.mapping.query.api.ProjectionList distinct(String property) {
-            return this;
-        }
-
-        @Override
-        public org.grails.datastore.mapping.query.api.ProjectionList rowCount() {
-            this.rowCount = true;
-            return this;
-        }
-
-        @Override
-        public ProjectionList id() {
-            return this;
-        }
-
-        @Override
-        public ProjectionList count() {
-            this.rowCount = true;
-            return this;
-        }
-
-        @Override
-        public ProjectionList property(String name) {
-            return this;
-        }
-
-        @Override
-        public ProjectionList sum(String name) {
-            return this;
-        }
-
-        @Override
-        public ProjectionList min(String name) {
-            return this;
-        }
-
-        @Override
-        public ProjectionList max(String name) {
-            return this;
-        }
-
-        @Override
-        public ProjectionList avg(String name) {
-            return this;
-        }
-
-        @Override
-        public ProjectionList distinct() {
-            return this;
-        }
-    }
 
     protected class HibernateAssociationQuery extends AssociationQuery {
 

@@ -25,9 +25,10 @@ import org.grails.orm.hibernate.query.AbstractHibernateCriteriaBuilder;
 import org.hibernate.SessionFactory;
 import org.hibernate.type.BasicTypeReference;
 import org.hibernate.type.StandardBasicTypes;
-import org.hibernate.type.Type;
+
 import org.springframework.orm.hibernate5.SessionHolder;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -125,8 +126,6 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
         super(targetClass, sessionFactory, uniqueResult);
         setDefaultFlushMode(GrailsHibernateTemplate.FLUSH_AUTO);
     }
-
-
 
 
 

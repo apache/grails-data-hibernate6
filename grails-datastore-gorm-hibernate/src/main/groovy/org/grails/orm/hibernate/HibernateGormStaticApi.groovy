@@ -130,11 +130,10 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
 
     @Override
     GrailsCriteria createCriteria() {
-        return null;
-//        def builder = new HibernateCriteriaBuilder(persistentClass, sessionFactory)
-//        builder.datastore = (AbstractHibernateDatastore)datastore
-//        builder.conversionService = conversionService
-//        return builder
+        def builder = new HibernateCriteriaBuilder(persistentClass, sessionFactory)
+        builder.datastore = (AbstractHibernateDatastore)datastore
+        builder.conversionService = conversionService
+        return builder
     }
 
     @Override

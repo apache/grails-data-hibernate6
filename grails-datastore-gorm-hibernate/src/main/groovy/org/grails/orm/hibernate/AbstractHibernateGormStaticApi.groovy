@@ -2,6 +2,8 @@ package org.grails.orm.hibernate
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import jakarta.persistence.NoResultException
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder
 import org.grails.orm.hibernate.cfg.CompositeIdentity
@@ -13,6 +15,7 @@ import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.hibernate.FlushMode
+import org.hibernate.NonUniqueResultException
 import org.hibernate.Session
 import org.hibernate.jpa.QueryHints
 import org.hibernate.query.NativeQuery
@@ -32,6 +35,7 @@ import jakarta.persistence.criteria.Root
  * @author Graeme Rocher
  * @since 4.0
  */
+@Slf4j
 @CompileStatic
 abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
 
@@ -176,17 +180,15 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(Long.class)
             criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(persistentEntity.javaClass)))
             Query criteria = session.createQuery(criteriaQuery)
-            HibernateHqlQuery hibernateHqlQuery = new HibernateHqlQuery(
-                    hibernateSession, persistentEntity, criteria) {
-                @Override
-                protected void flushBeforeQuery() {
-                    // no-op
-                }
+            Long result =0
+            try {
+                result = criteria.singleResult as Long
+            } catch (NonUniqueResultException nonUniqueResultException) {
+                log.warn(nonUniqueResultException.toString())
+            } catch (NoResultException noResultException) {
+                log.warn(noResultException.toString())
             }
-            hibernateTemplate.applySettings(criteria)
-            def result = hibernateHqlQuery.singleResult()
-            Number num = result == null ? 0 : (Number)result
-            return num
+            return result
         })
     }
 

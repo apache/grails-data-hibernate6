@@ -2,6 +2,7 @@ package grails.gorm.tests
 
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
+import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.transactions.Rollback
 import grails.gorm.transactions.Transactional
 import org.grails.datastore.mapping.query.Query
@@ -24,10 +25,10 @@ class DetachedCriteriaProjectionSpec extends Specification {
     def setup() {
         DetachedEntity.findAll().each { it.delete() }
         Entity1.findAll().each { it.delete(flush: true) }
-        final entity1 = new Entity1(id: 1, field1: 'Correct').save()
-        new Entity1(id: 2, field1: 'Incorrect').save()
-        new DetachedEntity(id: 1, entityId: entity1.id, field: 'abc').save()
-        new DetachedEntity(id: 2, entityId: entity1.id, field: 'def').save()
+        final entity1 = new Entity1(id: 1, field1: 'Correct', version: 0).save()
+        new Entity1(id: 2, field1: 'Incorrect', version: 0).save()
+        new DetachedEntity(id: 1, entityId: entity1.id, field: 'abc', version: 0).save()
+        new DetachedEntity(id: 2, entityId: entity1.id, field: 'def', version: 0).save()
     }
 
     @Rollback
@@ -83,18 +84,18 @@ class DetachedCriteriaProjectionSpec extends Specification {
 }
 
 @Entity
-public class Entity1 {
+public class Entity1 implements HibernateEntity<Entity1> {
     Long id
     String field1
     static hasMany = [children : Entity2]
 }
 @Entity
-class Entity2 {
+class Entity2 implements HibernateEntity<Entity2> {
     static belongsTo = [parent: Entity1]
     String field
 }
 @Entity
-class DetachedEntity {
+class DetachedEntity implements HibernateEntity<DetachedEntity> {
     Long entityId
     String field
 }

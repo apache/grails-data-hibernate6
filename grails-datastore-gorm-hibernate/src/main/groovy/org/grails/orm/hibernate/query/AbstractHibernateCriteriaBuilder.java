@@ -14,6 +14,7 @@ import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.EntityType;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.query.Query;
+import org.grails.datastore.mapping.query.Restrictions;
 import org.grails.datastore.mapping.query.api.BuildableCriteria;
 import org.grails.datastore.mapping.query.api.Criteria;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
@@ -90,6 +91,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     protected SessionFactory sessionFactory;
     protected Session hibernateSession;
     protected Class<?> targetClass;
+    protected Query.Junction junction = new Query.Conjunction();
     protected CriteriaQuery criteria;
     protected MetaClass criteriaMetaClass;
     protected boolean uniqueResult = false;
@@ -98,6 +100,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     protected boolean participate;
     protected boolean scroll;
     protected boolean count;
+    protected Query.ProjectionList projectionList = new Query.ProjectionList();
     protected List<String> aliasStack = new ArrayList<String>();
     protected Map<String, String> aliasMap = new HashMap<String, String>();
     protected static final String ALIAS = "_alias";
@@ -1123,66 +1126,69 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     @Override
     public Object invokeMethod(String name, Object obj) {
         Object[] args = obj.getClass().isArray() ? (Object[])obj : new Object[]{obj};
-//
-//        if (paginationEnabledList && SET_RESULT_TRANSFORMER_CALL.equals(name) && args.length == 1 &&
-//                args[0] instanceof ResultTransformer) {
-//            resultTransformer = (ResultTransformer) args[0];
-//            return null;
-//        }
-//
-//        if (isCriteriaConstructionMethod(name, args)) {
-//            if (criteria != null) {
-//                throwRuntimeException(new IllegalArgumentException("call to [" + name + "] not supported here"));
+
+        if (paginationEnabledList && SET_RESULT_TRANSFORMER_CALL.equals(name) && args.length == 1 &&
+                args[0] instanceof ResultTransformer) {
+            resultTransformer = (ResultTransformer) args[0];
+            return null;
+        }
+
+        if (isCriteriaConstructionMethod(name, args)) {
+            if (criteria != null) {
+                throwRuntimeException(new IllegalArgumentException("call to [" + name + "] not supported here"));
+            }
+
+            if (name.equals(GET_CALL)) {
+                uniqueResult = true;
+            }
+            else if (name.equals(SCROLL_CALL)) {
+                scroll = true;
+            }
+            else if (name.equals(COUNT_CALL)) {
+                count = true;
+            }
+//            else if (name.equals(LIST_DISTINCT_CALL)) {
+//                resultTransformer = CriteriaSpecification.DISTINCT_ROOT_ENTITY;
 //            }
-//
-//            if (name.equals(GET_CALL)) {
-//                uniqueResult = true;
+
+            createCriteriaInstance();
+
+            // Check for pagination params
+            if (name.equals(LIST_CALL) && args.length == 2) {
+                paginationEnabledList = true;
+                invokeClosureNode(args[1]);
+            }
+            else {
+                invokeClosureNode(args[0]);
+            }
+
+//            if (resultTransformer != null) {
+//                criteria.setResultTransformer(resultTransformer);
 //            }
-//            else if (name.equals(SCROLL_CALL)) {
-//                scroll = true;
-//            }
-//            else if (name.equals(COUNT_CALL)) {
-//                count = true;
-//            }
-////            else if (name.equals(LIST_DISTINCT_CALL)) {
-////                resultTransformer = CriteriaSpecification.DISTINCT_ROOT_ENTITY;
-////            }
-//
-//            createCriteriaInstance();
-//
-//            // Check for pagination params
-//            if (name.equals(LIST_CALL) && args.length == 2) {
-//                paginationEnabledList = true;
-//                invokeClosureNode(args[1]);
-//            }
-//            else {
-//                invokeClosureNode(args[0]);
-//            }
-//
-////            if (resultTransformer != null) {
-////                criteria.setResultTransformer(resultTransformer);
-////            }
-//            Object result;
-//            if (!uniqueResult) {
-//                if (scroll) {
-//
-//                    result = hibernateSession.createQuery(criteria).scroll();
-//                }
-//                else if (count) {
-//                    criteria.select(cb.count(root));
-//                    result = hibernateSession.createQuery(criteria).getSingleResult();
-//                }
+            Object result;
+            org.hibernate.query.Query query = hibernateSession.createQuery(criteria);
+            if (!uniqueResult) {
+
+                if (scroll) {
+
+                    result = query.scroll();
+                }
+                else if (count) {
+                    criteria.select(cb.count(root));
+                    result = query.getSingleResult();
+                }
 //                else if (paginationEnabledList) {
 //                    // Calculate how many results there are in total. This has been
 //                    // moved to before the 'list()' invocation to avoid any "ORDER
 //                    // BY" clause added by 'populateArgumentsForCriteria()', otherwise
 //                    // an exception is thrown for non-string sort fields (GRAILS-2690).
-//                    criteria.setFirstResult(0);
-//                    criteria.setMaxResults(Integer.MAX_VALUE);
+//                    query.setFirstResult(0);
+//                    query.setMaxResults(Integer.MAX_VALUE);
 //
 //                    // Restore the previous projection, add settings for the pagination parameters,
 //                    // and then execute the query.
-//                    boolean isProjection = (projectionList != null && projectionList.getLength() > 0);
+//                    boolean isProjection = (projectionList != null && !projectionList.getProjectionList().isEmpty());
+//
 //                    criteria.setProjection(isProjection ? projectionList : null);
 //
 //                    for (Order orderEntry : orderEntries) {
@@ -1195,7 +1201,8 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
 //                                        CriteriaSpecification.ROOT_ENTITY
 //                        );
 //                    }
-//                    else if (paginationEnabledList) {
+//                    else
+//                        if (paginationEnabledList) {
 //                        // relevant to GRAILS-5692
 //                        criteria.setResultTransformer(resultTransformer);
 //                    }
@@ -1224,35 +1231,35 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
 //                    }
 //                    result = createPagedResultList(argMap);
 //                }
-//                else {
-//                    result = criteria.list();
-//                }
-//            }
-//            else {
-//                result = executeUniqueResultWithProxyUnwrap();
-//            }
-//            if (!participate) {
-//                closeSession();
-//            }
-//            return result;
-//        }
-//
-//        if (criteria == null) createCriteriaInstance();
-//
-//        MetaMethod metaMethod = getMetaClass().getMetaMethod(name, args);
-//        if (metaMethod != null) {
-//            return metaMethod.invoke(this, args);
-//        }
-//
-//        metaMethod = criteriaMetaClass.getMetaMethod(name, args);
-//        if (metaMethod != null) {
-//            return metaMethod.invoke(criteria, args);
-//        }
-//        metaMethod = criteriaMetaClass.getMetaMethod(NameUtils.getSetterName(name), args);
-//        if (metaMethod != null) {
-//            return metaMethod.invoke(criteria, args);
-//        }
-//
+                else {
+                    result = query.list();
+                }
+            }
+            else {
+                result = query.uniqueResult();
+            }
+            if (!participate) {
+                closeSession();
+            }
+            return result;
+        }
+
+        if (criteria == null) createCriteriaInstance();
+
+        MetaMethod metaMethod = getMetaClass().getMetaMethod(name, args);
+        if (metaMethod != null) {
+            return metaMethod.invoke(this, args);
+        }
+
+        metaMethod = criteriaMetaClass.getMetaMethod(name, args);
+        if (metaMethod != null) {
+            return metaMethod.invoke(criteria, args);
+        }
+        metaMethod = criteriaMetaClass.getMetaMethod(NameUtils.getSetterName(name), args);
+        if (metaMethod != null) {
+            return metaMethod.invoke(criteria, args);
+        }
+
 //        if (isAssociationQueryMethod(args) || isAssociationQueryWithJoinSpecificationMethod(args)) {
 //            final boolean hasMoreThanOneArg = args.length > 1;
 //            Object callable = hasMoreThanOneArg ? args[1] : args[0];
@@ -1334,47 +1341,48 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
 //                }
 //            }
 //        }
-//        else if (args.length == 1 && args[0] != null) {
-//            if (criteria == null) {
-//                throwRuntimeException(new IllegalArgumentException("call to [" + name + "] not supported here"));
-//            }
-//
-//            Object value = args[0];
-//            Criterion c = null;
-//            if (name.equals(ID_EQUALS)) {
-//                return eq("id", value);
-//            }
-//
-//            if (name.equals(IS_NULL) ||
-//                    name.equals(IS_NOT_NULL) ||
-//                    name.equals(IS_EMPTY) ||
-//                    name.equals(IS_NOT_EMPTY)) {
-//                if (!(value instanceof String)) {
-//                    throwRuntimeException(new IllegalArgumentException("call to [" + name + "] with value [" +
-//                            value + "] requires a String value."));
-//                }
-//                String propertyName = calculatePropertyName((String)value);
-//                if (name.equals(IS_NULL)) {
-//                    c = Restrictions.isNull(propertyName);
-//                }
-//                else if (name.equals(IS_NOT_NULL)) {
-//                    c = Restrictions.isNotNull(propertyName);
-//                }
-//                else if (name.equals(IS_EMPTY)) {
-//                    c = Restrictions.isEmpty(propertyName);
-//                }
-//                else if (name.equals(IS_NOT_EMPTY)) {
-//                    c = Restrictions.isNotEmpty(propertyName);
-//                }
-//            }
-//
-//            if (c != null) {
-//                return addToCriteria(c);
-//            }
-//        }
+        else if (args.length == 1 && args[0] != null) {
+            if (criteria == null) {
+                throwRuntimeException(new IllegalArgumentException("call to [" + name + "] not supported here"));
+            }
+
+            Object value = args[0];
+            Query.Criterion c = null;
+            if (name.equals(ID_EQUALS)) {
+                return eq("id", value);
+            }
+
+            if (name.equals(IS_NULL) ||
+                    name.equals(IS_NOT_NULL) ||
+                    name.equals(IS_EMPTY) ||
+                    name.equals(IS_NOT_EMPTY)) {
+                if (!(value instanceof String)) {
+                    throwRuntimeException(new IllegalArgumentException("call to [" + name + "] with value [" +
+                            value + "] requires a String value."));
+                }
+                String propertyName = calculatePropertyName((String)value);
+                if (name.equals(IS_NULL)) {
+                    c = Restrictions.isNull(propertyName);
+                }
+                else if (name.equals(IS_NOT_NULL)) {
+                    c = Restrictions.isNotNull(propertyName);
+                }
+                else if (name.equals(IS_EMPTY)) {
+                    c = Restrictions.isEmpty(propertyName);
+                }
+                else if (name.equals(IS_NOT_EMPTY)) {
+                    c = Restrictions.isNotEmpty(propertyName);
+                }
+            }
+
+            if (c != null) {
+                return addToCriteria(c);
+            }
+        }
 
         throw new MissingMethodException(name, getClass(), args);
     }
+
 
 
 
@@ -1434,7 +1442,20 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     }
 
 
-
+    /**
+     * adds and returns the given criterion to the currently active criteria set.
+     * this might be either the root criteria or a currently open
+     * LogicalExpression.
+     */
+    protected Query.Criterion addToCriteria(Query.Criterion c) {
+        if (false) {
+//            logicalExpressionStack.get(logicalExpressionStack.size() - 1).args.add(c);
+        }
+        else {
+            junction.add(c);
+        }
+        return c;
+    }
 
 
 
