@@ -25,10 +25,10 @@ class DetachedCriteriaProjectionSpec extends Specification {
     def setup() {
         DetachedEntity.findAll().each { it.delete() }
         Entity1.findAll().each { it.delete(flush: true) }
-        final entity1 = new Entity1(id: 1, field1: 'Correct', version: 0).save()
-        new Entity1(id: 2, field1: 'Incorrect', version: 0).save()
-        new DetachedEntity(id: 1, entityId: entity1.id, field: 'abc', version: 0).save()
-        new DetachedEntity(id: 2, entityId: entity1.id, field: 'def', version: 0).save()
+        final entity1 = new Entity1(field1: 'Correct').save()
+        new Entity1(field1: 'Incorrect', version: 0).save()
+        new DetachedEntity(entityId: entity1.id, field: 'abc').save()
+        new DetachedEntity(entityId: entity1.id, field: 'def').save()
     }
 
     @Rollback

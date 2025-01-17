@@ -15,25 +15,28 @@
  */
 package grails.orm;
 
+import grails.gorm.DetachedCriteria;
 import groovy.lang.GroovySystem;
 import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.PluralAttribute;
-import org.grails.datastore.mapping.query.api.Criteria;
+import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
 import org.grails.orm.hibernate.HibernateDatastore;
 import org.grails.orm.hibernate.query.AbstractHibernateCriteriaBuilder;
+import org.grails.orm.hibernate.query.AbstractHibernateQuery;
+import org.grails.orm.hibernate.query.HibernateQuery;
 import org.hibernate.SessionFactory;
 import org.hibernate.type.BasicTypeReference;
 import org.hibernate.type.StandardBasicTypes;
 
 import org.springframework.orm.hibernate5.SessionHolder;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.grails.datastore.mapping.query.api.QueryableCriteria;
 
 
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.net.URL;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.util.Calendar;
@@ -154,11 +157,36 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
             else {
                 hibernateSession = sessionFactory.openSession();
             }
-            criteria = hibernateSession.getCriteriaBuilder().createQuery(targetClass);
+            criteriaQuery = hibernateSession.getCriteriaBuilder().createQuery(targetClass);
+            root = criteriaQuery.from(targetClass);
             cacheCriteriaMapping();
-            criteriaMetaClass = GroovySystem.getMetaClassRegistry().getMetaClass(criteria.getClass());
+            criteriaMetaClass = GroovySystem.getMetaClassRegistry().getMetaClass(criteriaQuery.getClass());
         }
     }
+
+    protected  DetachedCriteria convertToHibernateCriteria(QueryableCriteria<?> queryableCriteria) {
+        return getHibernateDetachedCriteria(new HibernateQuery(null, queryableCriteria.getPersistentEntity()), queryableCriteria);
+    }
+
+    public static DetachedCriteria getHibernateDetachedCriteria(AbstractHibernateQuery query, QueryableCriteria<?> queryableCriteria) {
+        String alias = queryableCriteria.getAlias();
+        return getHibernateDetachedCriteria(query, queryableCriteria, alias);
+    }
+
+    public static DetachedCriteria getHibernateDetachedCriteria(AbstractHibernateQuery query, QueryableCriteria<?> queryableCriteria, String alias) {
+        PersistentEntity persistentEntity = queryableCriteria.getPersistentEntity();
+        DetachedCriteria detachedCriteria = new DetachedCriteria(persistentEntity.getJavaClass());
+
+        populateHibernateDetachedCriteria(new HibernateQuery(null,persistentEntity), detachedCriteria, queryableCriteria);
+        return detachedCriteria;
+    }
+
+    private static void populateHibernateDetachedCriteria(AbstractHibernateQuery query, DetachedCriteria detachedCriteria, QueryableCriteria<?> queryableCriteria) {
+        List<org.grails.datastore.mapping.query.Query.Criterion> criteriaList = queryableCriteria.getCriteria();
+        for (org.grails.datastore.mapping.query.Query.Criterion criterion : criteriaList) {
+                detachedCriteria.add(criterion);
+            }
+        }
 
     protected void cacheCriteriaMapping() {
 
