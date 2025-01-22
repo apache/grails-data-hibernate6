@@ -21,9 +21,14 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.orm.hibernate.GrailsHibernateTemplate;
+import org.grails.orm.hibernate.HibernateSession;
 import org.hibernate.SessionFactory;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.persister.entity.PropertyMapping;
+import org.hibernate.query.criteria.JpaCriteriaQuery;
+
+import java.util.Iterator;
 
 /**
  * Bridges the Query API with the Hibernate Criteria API
@@ -58,6 +63,19 @@ public class HibernateQuery extends AbstractHibernateQuery {
         return this.criteriaQuery;
     }
 
-
+    @Override
+    public Object clone() {
+        final HibernateSession hibernateSession = (HibernateSession) getSession();
+        final GrailsHibernateTemplate hibernateTemplate = (GrailsHibernateTemplate) hibernateSession.getNativeInterface();
+        return hibernateTemplate.execute((GrailsHibernateTemplate.HibernateCallback<Object>) session -> {
+            JpaCriteriaQuery newCriteria = session.getCriteriaBuilder().createQuery(entity.getJavaClass());
+            HibernateQuery hibernateQuery = new HibernateQuery(newCriteria, hibernateSession, entity);
+            hibernateQuery.max(this.max);
+            hibernateQuery.offset(this.offset);
+            this.projections.getProjectionList().forEach(projection -> {hibernateQuery.projections().add(projection);});;
+            getCriteria().getCriteria().forEach(hibernateQuery::add);
+            return hibernateQuery;
+        });
+    }
 
 }

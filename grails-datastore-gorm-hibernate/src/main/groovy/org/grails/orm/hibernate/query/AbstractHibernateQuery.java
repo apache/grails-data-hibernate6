@@ -76,6 +76,7 @@ public abstract class AbstractHibernateQuery extends Query {
 
     protected AbstractHibernateQuery(CriteriaQuery criteriaQuery, AbstractHibernateSession session, PersistentEntity entity) {
         super(session, entity);
+        this.criteriaQuery = criteriaQuery;
         if(entity != null) {
             initializeJoinStatus();
         }
@@ -350,6 +351,8 @@ public abstract class AbstractHibernateQuery extends Query {
         }
     }
 
+
+
     @Override
     public Query firstResult(int offset) {
         offset(offset);
@@ -400,7 +403,12 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Object singleResult() {
-        return  getQuery().getSingleResult();
+        try {
+            return getQuery().getSingleResult();
+        }
+        catch (jakarta.persistence.NoResultException e) {
+           return null;
+        }
     }
 
     private final Predicate<Projection> countProjectionPredicate = projection -> projection instanceof CountProjection;
@@ -431,17 +439,10 @@ public abstract class AbstractHibernateQuery extends Query {
             criteriaQuery.select(root);
         }
 
-        List<JpaPredicate> predicates = this.criteria.getCriteria().stream().
-            map(criterion -> {
-                if (criterion instanceof IsNotNull c) {
-                    return cb.isNotNull(root.get(c.getProperty()));
-                } else if (criterion instanceof Equals c ) {
-                    return cb.equal(root.get(c.getProperty()),c.getValue());
-                }
-                return null;
-            }).filter(Objects::nonNull).toList();
+        jakarta.persistence.criteria.Predicate[] predicates =
+                PredicateGenerator.getPredicates(cb, criteriaQuery, root, this.criteria.getCriteria());
 
-        criteriaQuery.where(cb.and(predicates.toArray(new JpaPredicate[0])));
+        criteriaQuery.where(cb.and(predicates));
         return getSessionFactory()
                 .getCurrentSession()
                 .createQuery(criteriaQuery)

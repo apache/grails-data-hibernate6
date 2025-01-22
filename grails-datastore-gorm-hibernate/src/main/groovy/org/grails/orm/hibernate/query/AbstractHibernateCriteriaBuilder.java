@@ -10,7 +10,6 @@ import groovy.lang.MetaMethod;
 import groovy.lang.MissingMethodException;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.JoinType;
-import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import jakarta.persistence.metamodel.Attribute;
@@ -26,22 +25,16 @@ import org.hibernate.FetchMode;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
-import org.hibernate.query.criteria.JpaPredicate;
-import org.hibernate.query.criteria.JpaRoot;
 import org.hibernate.transform.ResultTransformer;
-import org.springframework.beans.BeanUtils;
 import org.springframework.core.convert.ConversionService;
 import org.grails.datastore.mapping.query.api.ProjectionList;
 
-import java.beans.PropertyDescriptor;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * Abstract super class for sharing code between Hibernate 3 and 4 implementations of HibernateCriteriaBuilder
@@ -1127,29 +1120,6 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         return invokeMethod(SCROLL_CALL, new Object[]{c});
     }
 
-    protected Predicate[] getPredicates(Root root_ , List<Query.Criterion> criteriaList) {
-        return criteriaList.stream().
-                map(criterion -> {
-                    if (criterion instanceof Query.IsNotNull c) {
-                        return cb.isNotNull(root_.get(c.getProperty()));
-                    } else if (criterion instanceof Query.Equals c ) {
-                        return cb.equal(root_.get(c.getProperty()),c.getValue());
-                    } else if (criterion instanceof Query.In c
-                            && c.getSubquery().getProjections().size() == 1
-                            && c.getSubquery().getProjections().get(0) instanceof Query.PropertyProjection
-                    ) {
-                        Query.PropertyProjection projection = (Query.PropertyProjection) c.getSubquery().getProjections().get(0);
-                        boolean distinct = projection instanceof Query.DistinctPropertyProjection;
-                        subquery = criteriaQuery.subquery(Long.class);
-                        Root from = subquery.from(c.getSubquery().getPersistentEntity().getJavaClass());
-                        Predicate[] predicates = getPredicates(from, c.getSubquery().getCriteria());
-                        subquery.select(from.get(projection.getPropertyName())).distinct(distinct).where(cb.and(predicates));
-                        return cb.in(root_.get(c.getProperty())).value(subquery);
-                    }
-                    return null;
-                }).filter(Objects::nonNull).toList().toArray(new Predicate[0]);
-    }
-    
     @SuppressWarnings("rawtypes")
     @Override
     public Object invokeMethod(String name, Object obj) {
@@ -1198,14 +1168,14 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 if (scroll) {
                     root = criteriaQuery.from(this.targetClass);
                     criteriaQuery.select(root);
-                    criteriaQuery.where(cb.and(getPredicates(root, this.junction.getCriteria())));
+                    criteriaQuery.where(cb.and(PredicateGenerator.getPredicates(cb, criteriaQuery, root, this.junction.getCriteria())));
                     result = hibernateSession.createQuery(criteriaQuery).scroll();
                 }
                 else if (count) {
                     criteriaQuery = cb.createQuery(Long.class);
                     root = criteriaQuery.from(this.targetClass);
                     criteriaQuery.select(cb.count(root));
-                    criteriaQuery.where(cb.and(getPredicates(root,this.junction.getCriteria())));
+                    criteriaQuery.where(cb.and(PredicateGenerator.getPredicates(cb, criteriaQuery, root,this.junction.getCriteria())));
                     result = hibernateSession.createQuery(criteriaQuery).getSingleResult();
                 }
 //                else if (paginationEnabledList) {
@@ -1263,19 +1233,16 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
 //                    result = createPagedResultList(argMap);
 //                }
                 else {
-                    String queryString = "select e2_0.id,e2_0.field1,e2_0.version from entity1 e1_0,entity1 e2_0 where e2_0.id in (select distinct de1_0.entity_id from detached_entity de1_0 where de1_0.field='abc') ";
-                    List<?> resultList = hibernateSession.createNativeQuery(queryString, targetClass).getResultList();
                     root = criteriaQuery.from(this.targetClass);
                     criteriaQuery.select(root);
-
-                    criteriaQuery.where(cb.and(getPredicates(root, this.junction.getCriteria())));
+                    criteriaQuery.where(cb.and(PredicateGenerator.getPredicates(cb, criteriaQuery, root, this.junction.getCriteria())));
                     result = hibernateSession.createQuery(criteriaQuery).list();
                 }
             }
             else {
                 root = criteriaQuery.from(this.targetClass);
                 criteriaQuery.select(root);
-                criteriaQuery.where(cb.and(getPredicates(root, this.junction.getCriteria())));
+                criteriaQuery.where(cb.and(PredicateGenerator.getPredicates(cb, criteriaQuery, root, this.junction.getCriteria())));
                 result = hibernateSession.createQuery(criteriaQuery).uniqueResult();
             }
             if (!participate) {
