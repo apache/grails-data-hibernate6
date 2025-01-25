@@ -28,8 +28,6 @@ import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.persister.entity.PropertyMapping;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
 
-import java.util.Iterator;
-
 /**
  * Bridges the Query API with the Hibernate Criteria API
  *
@@ -39,17 +37,8 @@ import java.util.Iterator;
 @SuppressWarnings("rawtypes")
 public class HibernateQuery extends AbstractHibernateQuery {
 
-
-    public HibernateQuery(CriteriaQuery criteria, AbstractHibernateSession session, PersistentEntity entity) {
-        super(criteria, session, entity);
-    }
-
-    public HibernateQuery(CriteriaQuery criteria, PersistentEntity entity) {
-        super(criteria, null, entity);
-    }
-
-    public HibernateQuery(CriteriaQuery subCriteria, AbstractHibernateSession session, PersistentEntity associatedEntity, String newAlias) {
-        super(subCriteria, session, associatedEntity, newAlias);
+    public HibernateQuery(AbstractHibernateSession session, PersistentEntity entity) {
+        super(session, entity);
     }
 
     protected PropertyMapping getEntityPersister(String name, SessionFactory sessionFactory) {
@@ -57,10 +46,11 @@ public class HibernateQuery extends AbstractHibernateQuery {
     }
 
     /**
+     * TODO FIX THIS
      * @return The hibernate criteria
      */
     public CriteriaQuery getHibernateCriteria() {
-        return this.criteriaQuery;
+        return null;
     }
 
     @Override
@@ -68,8 +58,7 @@ public class HibernateQuery extends AbstractHibernateQuery {
         final HibernateSession hibernateSession = (HibernateSession) getSession();
         final GrailsHibernateTemplate hibernateTemplate = (GrailsHibernateTemplate) hibernateSession.getNativeInterface();
         return hibernateTemplate.execute((GrailsHibernateTemplate.HibernateCallback<Object>) session -> {
-            JpaCriteriaQuery newCriteria = session.getCriteriaBuilder().createQuery(entity.getJavaClass());
-            HibernateQuery hibernateQuery = new HibernateQuery(newCriteria, hibernateSession, entity);
+            HibernateQuery hibernateQuery = new HibernateQuery(hibernateSession, entity);
             hibernateQuery.max(this.max);
             hibernateQuery.offset(this.offset);
             this.projections.getProjectionList().forEach(projection -> {hibernateQuery.projections().add(projection);});;

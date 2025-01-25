@@ -38,7 +38,6 @@ import org.grails.datastore.mapping.query.jpa.JpaQueryBuilder;
 import org.grails.datastore.mapping.query.jpa.JpaQueryInfo;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 import org.hibernate.*;
-import org.hibernate.proxy.HibernateProxy;
 import org.springframework.context.ApplicationEventPublisher;
 
 /**
@@ -176,7 +175,7 @@ public class HibernateSession extends AbstractHibernateSession {
         GrailsHibernateTemplate hibernateTemplate = getHibernateTemplate();
         Session currentSession = hibernateTemplate.getSessionFactory().getCurrentSession();
         final CriteriaQuery criteria = currentSession.getCriteriaBuilder().createQuery(type);
-        return new HibernateQuery(criteria, this, persistentEntity);
+        return new HibernateQuery(this, persistentEntity);
     }
 
     protected GrailsHibernateTemplate getHibernateTemplate() {

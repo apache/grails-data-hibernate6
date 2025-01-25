@@ -16,7 +16,6 @@
 package org.grails.orm.hibernate
 
 import grails.orm.HibernateCriteriaBuilder
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.finders.DynamicFinder
@@ -218,17 +217,16 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
 
     @Override
     protected void firePostQueryEvent(Session session, CriteriaQuery criteria, Object result) {
-        if(result instanceof List) {
-            datastore.applicationEventPublisher.publishEvent( new PostQueryEvent(datastore, new HibernateQuery(criteria, persistentEntity), (List)result))
-        }
-        else {
-            datastore.applicationEventPublisher.publishEvent( new PostQueryEvent(datastore, new HibernateQuery(criteria, persistentEntity), Collections.singletonList(result)))
-        }
+        def hibernateQuery = new HibernateQuery(new HibernateSession((HibernateDatastore) datastore, sessionFactory), persistentEntity)
+        def list = result instanceof List ? (List)result :  Collections.singletonList(result)
+        datastore.applicationEventPublisher.publishEvent( new PostQueryEvent(datastore, hibernateQuery, list))
     }
 
     @Override
     protected void firePreQueryEvent(Session session, CriteriaQuery criteria) {
-        datastore.applicationEventPublisher.publishEvent( new PreQueryEvent(datastore, new HibernateQuery(criteria, persistentEntity)))
+        def hibernateSession = new HibernateSession((HibernateDatastore) datastore, sessionFactory)
+        def hibernateQuery = new HibernateQuery(hibernateSession, persistentEntity)
+        datastore.applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hibernateQuery))
     }
 
     @Override

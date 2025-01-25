@@ -36,11 +36,24 @@ public class PredicateGenerator {
                             throw new RuntimeException("Must have a single predicate behind a not");
                         }
                         cb.not(predicates[0]);
-                    } else
-                    if (criterion instanceof Query.IsNotNull c) {
+                    } else if (criterion instanceof Query.IsNotNull c) {
                         return cb.isNotNull(root_.get(c.getProperty()));
                     } else if (criterion instanceof Query.Equals c ) {
                         return cb.equal(root_.get(c.getProperty()),c.getValue());
+                    } else if (criterion instanceof Query.IdEquals c ) {
+                        return cb.equal(root_.get("id"),c.getValue());
+                    } else if (criterion instanceof Query.GreaterThan c ) {
+                        return cb.gt(root_.get(c.getProperty()),(Number)c.getValue());
+                    } else if (criterion instanceof Query.GreaterThanEquals c ) {
+                        return cb.ge(root_.get(c.getProperty()),(Number)c.getValue());
+                    } else if (criterion instanceof Query.LessThan c ) {
+                        return cb.lt(root_.get(c.getProperty()),(Number)c.getValue());
+                    } else if (criterion instanceof Query.LessThanEquals c ) {
+                        return cb.le(root_.get(c.getProperty()),(Number)c.getValue());
+                    } else if (criterion instanceof Query.ILike c ) {
+                        return cb.ilike(root_.get(c.getProperty()),c.getValue().toString());
+                    } else if (criterion instanceof Query.RLike c ) {
+                        return cb.like(root_.get(c.getProperty()),c.getPattern(), '\\');
                     } else if (criterion instanceof Query.Like c ) {
                         return cb.like(root_.get(c.getProperty()),c.getValue().toString());
                     } else if (criterion instanceof Query.In c

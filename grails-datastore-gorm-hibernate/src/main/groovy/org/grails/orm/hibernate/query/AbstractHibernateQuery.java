@@ -14,6 +14,7 @@
  */
 package org.grails.orm.hibernate.query;
 
+import grails.gorm.DetachedCriteria;
 import groovy.util.logging.Slf4j;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -30,7 +31,6 @@ import org.grails.orm.hibernate.IHibernateTemplate;
 import org.hibernate.SessionFactory;
 import org.hibernate.persister.entity.PropertyMapping;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
-import org.hibernate.query.criteria.JpaPredicate;
 import org.hibernate.query.sqm.tree.SqmJoinType;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
@@ -41,7 +41,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
@@ -61,9 +60,7 @@ public abstract class AbstractHibernateQuery extends Query {
     protected static ConversionService conversionService = new DefaultConversionService();
 
     private static final Map<String, Boolean> JOIN_STATUS_CACHE = new ConcurrentHashMap<String, Boolean>();
-    protected Root root;
 
-    protected CriteriaQuery criteriaQuery;
     protected String alias;
     protected int aliasCount;
     protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<String, CriteriaAndAlias>();
@@ -72,16 +69,19 @@ public abstract class AbstractHibernateQuery extends Query {
     protected LinkedList<Association> associationStack = new LinkedList<Association>();
     protected LinkedList aliasInstanceStack = new LinkedList();
     private boolean hasJoins = false;
+    private DetachedCriteria detachedCriteria;
 
-
-    protected AbstractHibernateQuery(CriteriaQuery criteriaQuery, AbstractHibernateSession session, PersistentEntity entity) {
+    protected AbstractHibernateQuery(AbstractHibernateSession session, PersistentEntity entity) {
         super(session, entity);
-        this.criteriaQuery = criteriaQuery;
+        this.detachedCriteria = new DetachedCriteria(entity.getJavaClass());
         if(entity != null) {
             initializeJoinStatus();
         }
     }
 
+    public void setDetachedCriteria(DetachedCriteria detachedCriteria) {
+        this.detachedCriteria = detachedCriteria;
+    }
 
 
     @Override
@@ -98,11 +98,6 @@ public abstract class AbstractHibernateQuery extends Query {
                 if( a.getFetchStrategy() == FetchType.EAGER ) hasJoins = true;
             }
         }
-    }
-
-    protected AbstractHibernateQuery(CriteriaQuery subCriteria, AbstractHibernateSession session, PersistentEntity associatedEntity, String newAlias) {
-        this(subCriteria, session, associatedEntity);
-        alias = newAlias;
     }
 
     @Override
@@ -124,8 +119,6 @@ public abstract class AbstractHibernateQuery extends Query {
     public Query isNotNull(String property) {
         return this;
     }
-
-
 
 
     @Override
@@ -180,8 +173,6 @@ public abstract class AbstractHibernateQuery extends Query {
     }
 
 
-
-
     protected abstract PropertyMapping getEntityPersister(String name, SessionFactory sessionFactory);
 
 
@@ -198,16 +189,19 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query eq(String property, Object value) {
+        detachedCriteria.eq(property, value);
         return this;
     }
 
     @Override
     public Query idEq(Object value) {
+        detachedCriteria.idEq(value);
         return this;
     }
 
     @Override
     public Query gt(String property, Object value) {
+        detachedCriteria.gt(property, value);
         return this;
     }
 
@@ -228,26 +222,31 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query ge(String property, Object value) {
+        detachedCriteria.ge(property, value);
         return this;
     }
 
     @Override
     public Query le(String property, Object value) {
+        detachedCriteria.le(property, value);
         return this;
     }
 
     @Override
     public Query gte(String property, Object value) {
+        detachedCriteria.gte(property, value);
         return this;
     }
 
     @Override
     public Query lte(String property, Object value) {
+        detachedCriteria.lte(property, value);
         return this;
     }
 
     @Override
     public Query lt(String property, Object value) {
+        detachedCriteria.lt(property, value);
         return this;
     }
 
@@ -263,16 +262,19 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query like(String property, String expr) {
+        detachedCriteria.like(property, expr);
         return this;
     }
 
     @Override
     public Query ilike(String property, String expr) {
+        detachedCriteria.ilike(property, expr);
         return this;
     }
 
     @Override
     public Query rlike(String property, String expr) {
+        detachedCriteria.rlike(property, expr);
         return this;
     }
 
@@ -304,7 +306,7 @@ public abstract class AbstractHibernateQuery extends Query {
     protected CriteriaAndAlias getOrCreateAlias(String associationName, String alias) {
         CriteriaAndAlias subCriteria = null;
         String associationPath = getAssociationPath(associationName);
-        CriteriaQuery parentCriteria = criteriaQuery;
+        CriteriaQuery parentCriteria = getCriteriaBuilder().createQuery(entity.getJavaClass());
         if(alias == null) {
             alias = generateAlias(associationName);
         }
@@ -378,14 +380,12 @@ public abstract class AbstractHibernateQuery extends Query {
     @Override
     public Query join(String property) {
         this.hasJoins = true;
-        root.join(property);
         return this;
     }
 
     @Override
     public Query select(String property) {
         this.hasJoins = true;
-        this.criteriaQuery.select(root.get(property));
         return this;
     }
 
@@ -429,25 +429,30 @@ public abstract class AbstractHibernateQuery extends Query {
                 .getProjectionList()
                 .stream()
                 .filter(combinePredicates(projectionPredicates)).toList();
+        CriteriaQuery cq;
+        Root root;
         if (projections.size() == 1  && projections.get(0) instanceof CountProjection) {
-            criteriaQuery = cb.createQuery(Long.class);
-            root = criteriaQuery.from(entity.getJavaClass());
-            criteriaQuery.select(cb.count(root));
+            cq = cb.createQuery(Long.class);
+            root = cq.from(entity.getJavaClass());
+            cq.select(cb.count(root));
         } else {
-            criteriaQuery = cb.createQuery(entity.getJavaClass());
-            root = criteriaQuery.from(entity.getJavaClass());
-            criteriaQuery.select(root);
+            cq = cb.createQuery(entity.getJavaClass());
+            root = cq.from(entity.getJavaClass());
+            cq.select(root);
         }
+        List<Query.Criterion>  criteriaList = (List<Query.Criterion>)detachedCriteria.getCriteria();
 
         jakarta.persistence.criteria.Predicate[] predicates =
-                PredicateGenerator.getPredicates(cb, criteriaQuery, root, this.criteria.getCriteria());
-
-        criteriaQuery.where(cb.and(predicates));
-        return getSessionFactory()
+                PredicateGenerator.getPredicates(cb, cq, root, criteriaList);
+        cq.where(cb.and(predicates));
+        org.hibernate.query.Query query = getSessionFactory()
                 .getCurrentSession()
-                .createQuery(criteriaQuery)
-                .setMaxResults(this.max)
+                .createQuery(cq)
                 .setFirstResult(this.offset);
+        if (this.max > -1) {
+            query.setMaxResults(this.max);
+        }
+        return query;
     }
 
     private SessionFactory getSessionFactory() {

@@ -124,12 +124,10 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
         setDefaultFlushMode(GrailsHibernateTemplate.FLUSH_AUTO);
     }
 
-    @SuppressWarnings("rawtypes")
-    public HibernateCriteriaBuilder(Class targetClass, SessionFactory sessionFactory, boolean uniqueResult) {
-        super(targetClass, sessionFactory, uniqueResult);
-        setDefaultFlushMode(GrailsHibernateTemplate.FLUSH_AUTO);
+    @Override
+    protected DetachedCriteria convertToHibernateCriteria(QueryableCriteria<?> queryableCriteria) {
+        return null;
     }
-
 
 
     protected Class getClassForAssociationType(Attribute<?, ?> type) {
@@ -164,29 +162,6 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
         }
     }
 
-    protected  DetachedCriteria convertToHibernateCriteria(QueryableCriteria<?> queryableCriteria) {
-        return getHibernateDetachedCriteria(new HibernateQuery(null, queryableCriteria.getPersistentEntity()), queryableCriteria);
-    }
-
-    public static DetachedCriteria getHibernateDetachedCriteria(AbstractHibernateQuery query, QueryableCriteria<?> queryableCriteria) {
-        String alias = queryableCriteria.getAlias();
-        return getHibernateDetachedCriteria(query, queryableCriteria, alias);
-    }
-
-    public static DetachedCriteria getHibernateDetachedCriteria(AbstractHibernateQuery query, QueryableCriteria<?> queryableCriteria, String alias) {
-        PersistentEntity persistentEntity = queryableCriteria.getPersistentEntity();
-        DetachedCriteria detachedCriteria = new DetachedCriteria(persistentEntity.getJavaClass());
-
-        populateHibernateDetachedCriteria(new HibernateQuery(null,persistentEntity), detachedCriteria, queryableCriteria);
-        return detachedCriteria;
-    }
-
-    private static void populateHibernateDetachedCriteria(AbstractHibernateQuery query, DetachedCriteria detachedCriteria, QueryableCriteria<?> queryableCriteria) {
-        List<org.grails.datastore.mapping.query.Query.Criterion> criteriaList = queryableCriteria.getCriteria();
-        for (org.grails.datastore.mapping.query.Query.Criterion criterion : criteriaList) {
-                detachedCriteria.add(criterion);
-            }
-        }
 
     protected void cacheCriteriaMapping() {
 
@@ -204,4 +179,13 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
     }
 
 
+    @Override
+    public Object getProperty(String propertyName) {
+        return super.getProperty(propertyName);
+    }
+
+    @Override
+    public void setProperty(String propertyName, Object newValue) {
+        super.setProperty(propertyName, newValue);
+    }
 }
