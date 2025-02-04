@@ -45,6 +45,7 @@ class HibernateGormDatastoreSpec extends Specification{
                 'dataSource.url':"jdbc:tc:postgresql:///dev_db",
                 'dataSource.dbCreate': 'create-drop',
                 'dataSource.formatSql': 'true',
+                'dataSource.logSql': 'true',
                 'hibernate.flush.mode': 'COMMIT',
                 'hibernate.cache.queries': 'true',
                 'hibernate.hbm2ddl.auto': 'create'

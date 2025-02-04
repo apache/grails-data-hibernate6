@@ -33,7 +33,6 @@ import org.grails.orm.hibernate.IHibernateTemplate;
 import org.hibernate.SessionFactory;
 import org.hibernate.persister.entity.PropertyMapping;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
-import org.hibernate.query.sqm.tree.SqmJoinType;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
@@ -43,6 +42,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
@@ -76,9 +76,6 @@ public abstract class AbstractHibernateQuery extends Query {
     protected AbstractHibernateQuery(AbstractHibernateSession session, PersistentEntity entity) {
         super(session, entity);
         this.detachedCriteria = new DetachedCriteria(entity.getJavaClass());
-        if(entity != null) {
-            initializeJoinStatus();
-        }
     }
 
     public void setDetachedCriteria(DetachedCriteria detachedCriteria) {
@@ -92,15 +89,6 @@ public abstract class AbstractHibernateQuery extends Query {
         return value;
     }
 
-    protected void initializeJoinStatus() {
-        Boolean cachedStatus = JOIN_STATUS_CACHE.get(entity.getName());
-        if(cachedStatus != null) hasJoins = cachedStatus;
-        else {
-            for(Association a : entity.getAssociations()) {
-                if( a.getFetchStrategy() == FetchType.EAGER ) hasJoins = true;
-            }
-        }
-    }
 
     @Override
     public Query isEmpty(String property) {
@@ -281,6 +269,7 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query between(String property, Object start, Object end) {
+        detachedCriteria.between(property,start,end);
         return this;
     }
 
@@ -363,19 +352,6 @@ public abstract class AbstractHibernateQuery extends Query {
         return subCriteria;
     }
 
-    private SqmJoinType resolveJoinType(JoinType joinType) {
-        if(joinType  == null) {
-            return SqmJoinType.INNER;
-        }
-        switch (joinType) {
-            case LEFT:
-                return SqmJoinType.LEFT;
-            case RIGHT:
-                return SqmJoinType.RIGHT;
-            default:
-                return SqmJoinType.INNER;
-        }
-    }
 
 
 
@@ -397,19 +373,19 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query order(Order order) {
-        super.order(order);
+        detachedCriteria.order(order);
         return this;
     }
 
     @Override
     public Query join(String property) {
-        this.hasJoins = true;
+        detachedCriteria.join(property);
         return this;
     }
 
     @Override
     public Query select(String property) {
-        this.hasJoins = true;
+        detachedCriteria.select(property);
         return this;
     }
 
@@ -453,29 +429,70 @@ public abstract class AbstractHibernateQuery extends Query {
                 .getProjectionList()
                 .stream()
                 .filter(combinePredicates(projectionPredicates)).toList();
+        List<String> joinColumns = ((Map<String, FetchType>) detachedCriteria.getFetchStrategies())
+                .entrySet()
+                .stream()
+                .filter(entry -> entry.getValue().equals(FetchType.EAGER))
+                .map(Map.Entry::getKey)
+                .toList();
+
+
         CriteriaQuery cq;
         Root root;
         if (projections.size() == 1  && projections.get(0) instanceof CountProjection) {
             cq = cb.createQuery(Long.class);
             root = cq.from(entity.getJavaClass());
             cq.select(cb.count(root));
-        } else {
+        } else if (joinColumns.size() > 0) {
+            cq = cb.createQuery(entity.getJavaClass());
+            root = cq.from(entity.getJavaClass());
+            cq.select(root);
+            Map<String, JoinType> joinTypes = detachedCriteria.getJoinTypes();
+            joinColumns.forEach( joinColumn ->{
+                JoinType joinType =  joinTypes.entrySet()
+                    .stream()
+                    .filter(entry -> entry.getKey().equals(joinColumn))
+                    .map(Map.Entry::getValue)
+                    .findFirst()
+                            .orElse(JoinType.INNER);
+                root.join(joinColumn, joinType);
+            });
+        }
+        else {
             cq = cb.createQuery(entity.getJavaClass());
             root = cq.from(entity.getJavaClass());
             cq.select(root);
         }
+        List<Order> orders = detachedCriteria.getOrders();
+        if (!orders.isEmpty()) {
+            cq.orderBy(orders
+                    .stream()
+                    .map(order -> {
+                        if (order.getDirection().equals(Order.Direction.ASC)) {
+                            return cb.asc(root.get(order.getProperty()));
+                        } else {
+                            return cb.desc(root.get(order.getProperty()));
+                        }
+                    })
+                    .toList()
+            );
+        }
 
         List<Query.Criterion>  criteriaList = (List<Query.Criterion>)detachedCriteria.getCriteria();
+        if (!criteriaList.isEmpty()) {
+            cq.where(cb.and(PredicateGenerator.getPredicates(cb, cq, root, criteriaList)));
+        }
 
-        jakarta.persistence.criteria.Predicate[] predicates =
-                PredicateGenerator.getPredicates(cb, cq, root, criteriaList);
-        cq.where(cb.and(predicates));
         org.hibernate.query.Query query = getSessionFactory()
                 .getCurrentSession()
                 .createQuery(cq)
-                .setFirstResult(this.offset);
+                .setFirstResult(this.offset)
+                .setHint("org.hibernate.cacheable", queryCache);;
         if (this.max > -1) {
             query.setMaxResults(this.max);
+        }
+        if (Objects.nonNull(lockResult)) {
+            query.setLockMode(lockResult);
         }
         return query;
     }
@@ -493,9 +510,6 @@ public abstract class AbstractHibernateQuery extends Query {
     protected List executeQuery(PersistentEntity entity, Junction criteria) {
         return list();
     }
-
-
-
 
     protected String calculatePropertyName(String property) {
         if (alias == null) {
