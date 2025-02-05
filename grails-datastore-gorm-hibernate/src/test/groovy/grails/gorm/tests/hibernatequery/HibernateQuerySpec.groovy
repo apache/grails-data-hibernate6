@@ -255,6 +255,85 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         oldBob == bobs[0]
     }
 
+    def projectionProperty() {
+        given:
+        hibernateQuery.projections().property("lastName")
+        when:
+        def count = hibernateQuery.singleResult()
+        then:
+        count[0] == "Builder"
+    }
+
+    def projectionId() {
+        given:
+        hibernateQuery.projections().id()
+        when:
+        def count = hibernateQuery.singleResult()
+        then:
+        count[0] == oldBob.id
+    }
+
+    def count() {
+        new Person(firstName: "Fred", lastName: "Rogers", age: 48).save(flush: true)
+        given:
+        hibernateQuery.projections().count()
+        when:
+        def count = hibernateQuery.singleResult()
+        then:
+        count[0] == 2
+    }
+
+    def max() {
+        new Person(firstName: "Fred", lastName: "Rogers", age: 48).save(flush: true)
+        given:
+        hibernateQuery.projections().max("age")
+        when:
+        def age = hibernateQuery.singleResult()
+        then:
+        age[0] == 50
+    }
+
+    def min() {
+        new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
+        given:
+        hibernateQuery.projections().min("age")
+        when:
+        def age = hibernateQuery.singleResult()
+        then:
+        age[0] == 50
+    }
+
+    def sum() {
+        new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
+        given:
+        hibernateQuery.projections().sum("age")
+        when:
+        def age = hibernateQuery.singleResult()
+        then:
+        age[0] == 102
+    }
+
+    def avg() {
+        new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
+        given:
+        hibernateQuery.projections().avg("age")
+        when:
+        def age = hibernateQuery.singleResult()
+        then:
+        age[0] == 51
+    }
+
+    def groupByLastNameAverageAge() {
+        new Person(firstName: "Fred", lastName: "Builder", age: 52).save(flush: true)
+        given:
+        hibernateQuery.projections().groupProperty("lastName").avg("age")
+        when:
+        def result = hibernateQuery.singleResult()
+        then:
+        result[0] == "Builder"
+        result[1] == 51
+    }
+
 }
 
 @Entity

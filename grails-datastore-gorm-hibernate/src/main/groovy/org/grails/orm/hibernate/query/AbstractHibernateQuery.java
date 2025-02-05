@@ -19,9 +19,10 @@ import groovy.lang.Closure;
 import groovy.util.logging.Slf4j;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Root;
-import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
@@ -31,20 +32,23 @@ import org.grails.datastore.mapping.query.Restrictions;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 import org.grails.orm.hibernate.IHibernateTemplate;
 import org.hibernate.SessionFactory;
-import org.hibernate.persister.entity.PropertyMapping;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
+import org.hibernate.query.criteria.JpaExpression;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 /**
  * Bridges the Query API with the Hibernate Criteria API
@@ -123,7 +127,8 @@ public abstract class AbstractHibernateQuery extends Query {
         return super.getEntity();
     }
 
-    protected String getAssociationPath(String propertyName) {
+
+    private String getAssociationPath(String propertyName) {
         if(propertyName.indexOf('.') > -1) {
             return propertyName;
         }
@@ -138,36 +143,6 @@ public abstract class AbstractHibernateQuery extends Query {
             return fullPath.toString();
         }
     }
-
-    protected String getCurrentAlias() {
-        if (alias != null) {
-            return alias;
-        }
-
-        if (aliasStack.isEmpty()) {
-            return null;
-        }
-
-        return aliasStack.getLast();
-    }
-
-    @SuppressWarnings("unchecked")
-    static void doTypeConversionIfNeccessary(PersistentEntity entity, PropertyCriterion pc) {
-        // ignore Size related constraints
-        if (pc.getClass().getSimpleName().startsWith(SIZE_CONSTRAINT_PREFIX)) {
-            return;
-        }
-
-        String property = pc.getProperty();
-        Object value = pc.getValue();
-        PersistentProperty p = entity.getPropertyByName(property);
-        if (p != null && !p.getType().isInstance(value)) {
-            pc.setValue(conversionService.convert(value, p.getType()));
-        }
-    }
-
-
-    protected abstract PropertyMapping getEntityPersister(String name, SessionFactory sessionFactory);
 
 
 
@@ -291,6 +266,9 @@ public abstract class AbstractHibernateQuery extends Query {
         return this;
     }
 
+
+    //TODO THIS IS USED BY AbstractCriteriaBuilder which is not the parent of
+    // AbstractHibernateCriteriaBuilder
     @Override
     public AssociationQuery createQuery(String associationName) {
         final PersistentProperty property = entity.getPropertyByName(calculatePropertyName(associationName));
@@ -306,17 +284,8 @@ public abstract class AbstractHibernateQuery extends Query {
         throw new InvalidDataAccessApiUsageException("Cannot query association [" + calculatePropertyName(associationName) + "] of entity [" + entity + "]. Property is not an association!");
     }
 
-    protected CriteriaAndAlias getCriteriaAndAlias(DetachedAssociationCriteria associationCriteria) {
-        String associationPath = associationCriteria.getAssociationPath();
-        String alias = associationCriteria.getAlias();
 
-        if(associationPath == null) {
-            associationPath = associationCriteria.getAssociation().getName();
-        }
-        return getOrCreateAlias(associationPath, alias);
-    }
-
-    protected CriteriaAndAlias getOrCreateAlias(String associationName, String alias) {
+    private CriteriaAndAlias getOrCreateAlias(String associationName, String alias) {
         CriteriaAndAlias subCriteria = null;
         String associationPath = getAssociationPath(associationName);
         CriteriaQuery parentCriteria = getCriteriaBuilder().createQuery(entity.getJavaClass());
@@ -411,24 +380,45 @@ public abstract class AbstractHibernateQuery extends Query {
         }
     }
 
+    private final Predicate<Projection> idProjectionPredicate = projection -> projection instanceof IdProjection;
     private final Predicate<Projection> countProjectionPredicate = projection -> projection instanceof CountProjection;
+    private final Predicate<Projection> countDistinctProjection = projection -> projection instanceof CountDistinctProjection;
+    private final Predicate<Projection> maxProjectionPredicate = projection -> projection instanceof MaxProjection;
+    private final Predicate<Projection> minProjectionPredicate = projection -> projection instanceof MinProjection;
+    private final Predicate<Projection> sumProjectionPredicate = projection -> projection instanceof SumProjection;
+    private final Predicate<Projection> avgProjectionPredicate = projection -> projection instanceof AvgProjection;
+    private final Predicate<Projection> propertyProjectionPredicate = projection -> projection instanceof PropertyProjection;
 
     @SuppressWarnings("unchecked")
-    Predicate<Projection>[] projectionPredicates = new Predicate[] {countProjectionPredicate} ;
+    Predicate<Projection>[] projectionPredicates = new Predicate[] {
+            idProjectionPredicate
+            , propertyProjectionPredicate
+            , countProjectionPredicate
+            , countDistinctProjection
+            , maxProjectionPredicate
+            , minProjectionPredicate
+            , sumProjectionPredicate
+            , avgProjectionPredicate
+    } ;
 
     @SafeVarargs
     private static <T> Predicate<T> combinePredicates(Predicate<T>... predicates) {
         return Arrays.stream(predicates)
-                .reduce(Predicate::and)
+                .reduce(Predicate::or)
                 .orElse(x -> true);
     }
 
     private org.hibernate.query.Query getQuery() {
         HibernateCriteriaBuilder cb = getCriteriaBuilder();
-        List<Projection> projections = projections()
-                .getProjectionList()
+        List<Projection> projectionList = projections().getProjectionList();
+        List<Projection> projections = projectionList
                 .stream()
                 .filter(combinePredicates(projectionPredicates)).toList();
+        List<GroupPropertyProjection> groupProjections = projectionList
+                .stream()
+                .filter(GroupPropertyProjection.class::isInstance)
+                .map(GroupPropertyProjection.class::cast)
+                .toList();
         List<String> joinColumns = ((Map<String, FetchType>) detachedCriteria.getFetchStrategies())
                 .entrySet()
                 .stream()
@@ -439,29 +429,55 @@ public abstract class AbstractHibernateQuery extends Query {
 
         CriteriaQuery cq;
         Root root;
-        if (projections.size() == 1  && projections.get(0) instanceof CountProjection) {
-            cq = cb.createQuery(Long.class);
+        if (!groupProjections.isEmpty() && !projections.isEmpty()) {
+            cq = cb.createQuery(Object[].class);
             root = cq.from(entity.getJavaClass());
-            cq.select(cb.count(root));
-        } else if (joinColumns.size() > 0) {
-            cq = cb.createQuery(entity.getJavaClass());
-            root = cq.from(entity.getJavaClass());
-            cq.select(root);
-            Map<String, JoinType> joinTypes = detachedCriteria.getJoinTypes();
-            joinColumns.forEach( joinColumn ->{
-                JoinType joinType =  joinTypes.entrySet()
+            List<Expression> groupByPaths = groupProjections
                     .stream()
-                    .filter(entry -> entry.getKey().equals(joinColumn))
-                    .map(Map.Entry::getValue)
-                    .findFirst()
-                            .orElse(JoinType.INNER);
-                root.join(joinColumn, joinType);
-            });
-        }
-        else {
+                    .map(groupPropertyProjection -> root.get(groupPropertyProjection.getPropertyName()))
+                    .map(Expression.class::cast)
+                    .toList();
+            List<Expression> projectionExpressions = projections
+                    .stream()
+                    .map(projectionToJpaExpression(cb, root))
+                    .filter(Objects::nonNull)
+                    .map(Expression.class::cast)
+                    .toList();
+            cq.multiselect(projectionExpressions);
+            cq.groupBy(groupByPaths);
+        } else if (groupProjections.isEmpty() && !projections.isEmpty())  {
+            cq = cb.createQuery(Object[].class);
+            root = cq.from(entity.getJavaClass());
+            List<Expression> projectionExpressions = projections
+                    .stream()
+                    .map(projectionToJpaExpression(cb, root))
+                    .filter(Objects::nonNull)
+                    .map(Expression.class::cast)
+                    .toList();
+            if (projectionExpressions.size() == 1) {
+                cq.select(projectionExpressions.get(0));
+            } else {
+                cq.multiselect(projectionExpressions);
+            }
+        } else if (!groupProjections.isEmpty() && projections.isEmpty()) {
+            throw new RuntimeException("Group By without projections");
+        } else {
             cq = cb.createQuery(entity.getJavaClass());
             root = cq.from(entity.getJavaClass());
             cq.select(root);
+            if (joinColumns.size() > 0) {
+
+                Map<String, JoinType> joinTypes = detachedCriteria.getJoinTypes();
+                joinColumns.forEach( joinColumn ->{
+                    JoinType joinType =  joinTypes.entrySet()
+                            .stream()
+                            .filter(entry -> entry.getKey().equals(joinColumn))
+                            .map(Map.Entry::getValue)
+                            .findFirst()
+                            .orElse(JoinType.INNER);
+                    root.join(joinColumn, joinType);
+                });
+            }
         }
         List<Order> orders = detachedCriteria.getOrders();
         if (!orders.isEmpty()) {
@@ -495,6 +511,33 @@ public abstract class AbstractHibernateQuery extends Query {
             query.setLockMode(lockResult);
         }
         return query;
+    }
+
+    private Function<Projection, JpaExpression> projectionToJpaExpression(HibernateCriteriaBuilder cb, Root root) {
+        return projection -> {
+            if (countProjectionPredicate.test(projection)) {
+                return cb.count(root);
+            } else if (countDistinctProjection.test(projection)) {
+                return cb.countDistinct(root);
+            } else if (maxProjectionPredicate.test(projection)) {
+                Path path = root.get(((PropertyProjection) projection).getPropertyName());
+                return cb.max(path);
+            } else if (minProjectionPredicate.test(projection)) {
+                Path path = root.get(((PropertyProjection) projection).getPropertyName());
+                return cb.min(path);
+            } else if (avgProjectionPredicate.test(projection)) {
+                Path path = root.get(((PropertyProjection) projection).getPropertyName());
+                return cb.avg(path);
+            } else if (sumProjectionPredicate.test(projection)) {
+                Path path = root.get(((PropertyProjection) projection).getPropertyName());
+                return cb.sum(path);
+            } else if (idProjectionPredicate.test(projection)) {
+               return (JpaExpression) root.get("id");
+            } else if (propertyProjectionPredicate.test(projection)) { // keep this last!!!
+                return (JpaExpression)root.get(((PropertyProjection) projection).getPropertyName());
+            }
+            return null;
+        };
     }
 
     private SessionFactory getSessionFactory() {

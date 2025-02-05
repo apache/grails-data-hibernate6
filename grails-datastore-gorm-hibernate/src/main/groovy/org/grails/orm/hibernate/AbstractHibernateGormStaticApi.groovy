@@ -44,12 +44,12 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
     protected ConversionService conversionService
     protected final HibernateSession hibernateSession
 
-    AbstractHibernateGormStaticApi(
-            Class<D> persistentClass,
-            HibernateDatastore datastore,
-            List<FinderMethod> finders) {
-        this(persistentClass, datastore, finders, null)
-    }
+//    AbstractHibernateGormStaticApi(
+//            Class<D> persistentClass,
+//            HibernateDatastore datastore,
+//            List<FinderMethod> finders) {
+//        this(persistentClass, datastore, finders, null)
+//    }
 
     AbstractHibernateGormStaticApi(
             Class<D> persistentClass,
