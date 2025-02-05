@@ -2,6 +2,7 @@ package org.grails.orm.hibernate.query;
 
 import groovy.util.logging.Slf4j;
 import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
@@ -24,7 +25,7 @@ import java.util.Objects;
 public class PredicateGenerator {
     private static final Logger log = LoggerFactory.getLogger(PredicateGenerator.class);
 
-    public static Predicate[] getPredicates(HibernateCriteriaBuilder cb, CriteriaQuery criteriaQuery, Root root_, List<Query.Criterion> criteriaList) {
+    public static Predicate[] getPredicates(HibernateCriteriaBuilder cb, CriteriaQuery criteriaQuery, From root_, List<Query.Criterion> criteriaList) {
 
 
         return criteriaList.stream().

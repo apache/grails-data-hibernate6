@@ -20,9 +20,9 @@ import groovy.util.logging.Slf4j;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Path;
-import jakarta.persistence.criteria.Root;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
@@ -38,8 +38,8 @@ import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 
+import java.util.AbstractMap;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -48,7 +48,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
 /**
  * Bridges the Query API with the Hibernate Criteria API
@@ -360,7 +360,7 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public List list() {
-        return getQuery().getResultList();
+        return createQuery().getResultList();
     }
 
 
@@ -373,7 +373,7 @@ public abstract class AbstractHibernateQuery extends Query {
     @Override
     public Object singleResult() {
         try {
-            return getQuery().getSingleResult();
+            return createQuery().getSingleResult();
         }
         catch (jakarta.persistence.NoResultException e) {
            return null;
@@ -408,96 +408,19 @@ public abstract class AbstractHibernateQuery extends Query {
                 .orElse(x -> true);
     }
 
-    private org.hibernate.query.Query getQuery() {
+    private org.hibernate.query.Query createQuery() {
         HibernateCriteriaBuilder cb = getCriteriaBuilder();
-        List<Projection> projectionList = projections().getProjectionList();
-        List<Projection> projections = projectionList
-                .stream()
-                .filter(combinePredicates(projectionPredicates)).toList();
-        List<GroupPropertyProjection> groupProjections = projectionList
-                .stream()
-                .filter(GroupPropertyProjection.class::isInstance)
-                .map(GroupPropertyProjection.class::cast)
-                .toList();
-        List<String> joinColumns = ((Map<String, FetchType>) detachedCriteria.getFetchStrategies())
-                .entrySet()
-                .stream()
-                .filter(entry -> entry.getValue().equals(FetchType.EAGER))
-                .map(Map.Entry::getKey)
-                .toList();
+        List<Projection> projections = collectProjections();
+        List<GroupPropertyProjection> groupProjections = collectGroupProjections();
+        List<String> joinColumns = collectJoinColumns();
 
-
-        CriteriaQuery cq;
-        Root root;
-        if (!groupProjections.isEmpty() && !projections.isEmpty()) {
-            cq = cb.createQuery(Object[].class);
-            root = cq.from(entity.getJavaClass());
-            List<Expression> groupByPaths = groupProjections
-                    .stream()
-                    .map(groupPropertyProjection -> root.get(groupPropertyProjection.getPropertyName()))
-                    .map(Expression.class::cast)
-                    .toList();
-            List<Expression> projectionExpressions = projections
-                    .stream()
-                    .map(projectionToJpaExpression(cb, root))
-                    .filter(Objects::nonNull)
-                    .map(Expression.class::cast)
-                    .toList();
-            cq.multiselect(projectionExpressions);
-            cq.groupBy(groupByPaths);
-        } else if (groupProjections.isEmpty() && !projections.isEmpty())  {
-            cq = cb.createQuery(Object[].class);
-            root = cq.from(entity.getJavaClass());
-            List<Expression> projectionExpressions = projections
-                    .stream()
-                    .map(projectionToJpaExpression(cb, root))
-                    .filter(Objects::nonNull)
-                    .map(Expression.class::cast)
-                    .toList();
-            if (projectionExpressions.size() == 1) {
-                cq.select(projectionExpressions.get(0));
-            } else {
-                cq.multiselect(projectionExpressions);
-            }
-        } else if (!groupProjections.isEmpty() && projections.isEmpty()) {
-            throw new RuntimeException("Group By without projections");
-        } else {
-            cq = cb.createQuery(entity.getJavaClass());
-            root = cq.from(entity.getJavaClass());
-            cq.select(root);
-            if (joinColumns.size() > 0) {
-
-                Map<String, JoinType> joinTypes = detachedCriteria.getJoinTypes();
-                joinColumns.forEach( joinColumn ->{
-                    JoinType joinType =  joinTypes.entrySet()
-                            .stream()
-                            .filter(entry -> entry.getKey().equals(joinColumn))
-                            .map(Map.Entry::getValue)
-                            .findFirst()
-                            .orElse(JoinType.INNER);
-                    root.join(joinColumn, joinType);
-                });
-            }
-        }
-        List<Order> orders = detachedCriteria.getOrders();
-        if (!orders.isEmpty()) {
-            cq.orderBy(orders
-                    .stream()
-                    .map(order -> {
-                        if (order.getDirection().equals(Order.Direction.ASC)) {
-                            return cb.asc(root.get(order.getProperty()));
-                        } else {
-                            return cb.desc(root.get(order.getProperty()));
-                        }
-                    })
-                    .toList()
-            );
-        }
-
-        List<Query.Criterion>  criteriaList = (List<Query.Criterion>)detachedCriteria.getCriteria();
-        if (!criteriaList.isEmpty()) {
-            cq.where(cb.and(PredicateGenerator.getPredicates(cb, cq, root, criteriaList)));
-        }
+        CriteriaQuery cq = projections.size() > 1 ?  cb.createQuery(Object[].class) : cb.createQuery(Object.class);
+        From root = cq.from(entity.getJavaClass());
+        Map<String, From> tablesByName = assignJoinTables(joinColumns, root);
+        assignProjections(projections, cb, root, tablesByName, cq);
+        assignGroupBy(groupProjections, root, cq);
+        assignOrderBy(cq, cb, root);
+        assignCriteria(cq, cb, root);
 
         org.hibernate.query.Query query = getSessionFactory()
                 .getCurrentSession()
@@ -513,28 +436,128 @@ public abstract class AbstractHibernateQuery extends Query {
         return query;
     }
 
-    private Function<Projection, JpaExpression> projectionToJpaExpression(HibernateCriteriaBuilder cb, Root root) {
+    private List<String> collectJoinColumns() {
+        List<String> joinColumns = ((Map<String, FetchType>) detachedCriteria.getFetchStrategies())
+                .entrySet()
+                .stream()
+                .filter(entry -> entry.getValue().equals(FetchType.EAGER))
+                .map(Map.Entry::getKey)
+                .toList();
+        return joinColumns;
+    }
+
+    private List<GroupPropertyProjection> collectGroupProjections() {
+        List<GroupPropertyProjection> groupProjections = projections().getProjectionList()
+                .stream()
+                .filter(GroupPropertyProjection.class::isInstance)
+                .map(GroupPropertyProjection.class::cast)
+                .toList();
+        return groupProjections;
+    }
+
+    private List<Projection> collectProjections() {
+        List<Projection> projections = projections().getProjectionList()
+                .stream()
+                .filter(combinePredicates(projectionPredicates)).toList();
+        return projections;
+    }
+
+    private void assignCriteria(CriteriaQuery cq, HibernateCriteriaBuilder cb, From root) {
+        List<Criterion>  criteriaList = (List<Criterion>)detachedCriteria.getCriteria();
+        if (!criteriaList.isEmpty()) {
+            cq.where(cb.and(PredicateGenerator.getPredicates(cb, cq, root, criteriaList)));
+        }
+    }
+
+    private void assignOrderBy(CriteriaQuery cq, HibernateCriteriaBuilder cb, From root) {
+        List<Order> orders = detachedCriteria.getOrders();
+        if (!orders.isEmpty()) {
+            cq.orderBy(orders
+                    .stream()
+                    .map(order -> {
+                        if (order.getDirection().equals(Order.Direction.ASC)) {
+                            return cb.asc(root.get(order.getProperty()));
+                        } else {
+                            return cb.desc(root.get(order.getProperty()));
+                        }
+                    })
+                    .toList()
+            );
+        }
+    }
+
+    private void assignGroupBy(List<GroupPropertyProjection> groupProjections, From root, CriteriaQuery cq) {
+        if (!groupProjections.isEmpty()) {
+            List<Expression> groupByPaths = groupProjections
+                    .stream()
+                    .map(groupPropertyProjection -> root.get(groupPropertyProjection.getPropertyName()))
+                    .map(Expression.class::cast)
+                    .toList();
+            cq.groupBy(groupByPaths);
+        }
+    }
+
+    private void assignProjections(List<Projection> projections, HibernateCriteriaBuilder cb, From root, Map<String, From> tablesByName, CriteriaQuery cq) {
+        List<Expression> projectionExpressions = projections
+                .stream()
+                .map(projectionToJpaExpression(cb, root, tablesByName))
+                .filter(Objects::nonNull)
+                .map(Expression.class::cast)
+                .toList();
+        if (projectionExpressions.size() == 1) {
+            cq.select(projectionExpressions.get(0));
+        } else if (projectionExpressions.size() > 1){
+            cq.multiselect(projectionExpressions);
+        } else {
+            cq.select(root);
+        }
+    }
+
+    private Map<String, From> assignJoinTables(List<String> joinColumns, From root) {
+        Map<String, JoinType> joinTypes = detachedCriteria.getJoinTypes();
+        //The join column is column for joining from the root entity
+        Map<String, From> tablesByName = joinColumns.stream().map(joinColumn -> {
+            JoinType joinType = joinTypes.entrySet()
+                    .stream()
+                    .filter(entry -> entry.getKey().equals(joinColumn))
+                    .map(Map.Entry::getValue)
+                    .findFirst()
+                    .orElse(JoinType.INNER);
+            From table = root.join(joinColumn, joinType);
+            return new AbstractMap.SimpleEntry<>(joinColumn, table);
+        }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        tablesByName.put("root", root);
+        return tablesByName;
+    }
+
+    private Function<Projection, JpaExpression> projectionToJpaExpression(
+            HibernateCriteriaBuilder cb
+            , From root
+            , Map<String, From> tablesByName) {
         return projection -> {
             if (countProjectionPredicate.test(projection)) {
-                return cb.count(root);
+                return cb.count(tablesByName.get("root"));
             } else if (countDistinctProjection.test(projection)) {
-                return cb.countDistinct(root);
-            } else if (maxProjectionPredicate.test(projection)) {
-                Path path = root.get(((PropertyProjection) projection).getPropertyName());
-                return cb.max(path);
-            } else if (minProjectionPredicate.test(projection)) {
-                Path path = root.get(((PropertyProjection) projection).getPropertyName());
-                return cb.min(path);
-            } else if (avgProjectionPredicate.test(projection)) {
-                Path path = root.get(((PropertyProjection) projection).getPropertyName());
-                return cb.avg(path);
-            } else if (sumProjectionPredicate.test(projection)) {
-                Path path = root.get(((PropertyProjection) projection).getPropertyName());
-                return cb.sum(path);
+                return cb.countDistinct(tablesByName.get("root"));
             } else if (idProjectionPredicate.test(projection)) {
-               return (JpaExpression) root.get("id");
-            } else if (propertyProjectionPredicate.test(projection)) { // keep this last!!!
-                return (JpaExpression)root.get(((PropertyProjection) projection).getPropertyName());
+                return (JpaExpression) tablesByName.get("root").get("id");
+            } else {
+                String propertyName = ((PropertyProjection) projection).getPropertyName();
+                String[] parsed = propertyName.split("\\.");
+                String tableName = parsed.length > 1 ? parsed[0] : "root";
+                String columnName = parsed.length > 1 ? parsed[1] :propertyName;
+                Path path = tablesByName.get(tableName).get(columnName);
+                if (maxProjectionPredicate.test(projection)) {
+                    return cb.max(path);
+                } else if (minProjectionPredicate.test(projection)) {
+                    return cb.min(path);
+                } else if (avgProjectionPredicate.test(projection)) {
+                    return cb.avg(path);
+                } else if (sumProjectionPredicate.test(projection)) {
+                    return cb.sum(path);
+                } else if (propertyProjectionPredicate.test(projection)) { // keep this last!!!
+                    return (JpaExpression)path;
+                }
             }
             return null;
         };

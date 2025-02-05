@@ -223,6 +223,18 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         oldBob == newBob
     }
 
+    def joinWithProjection() {
+        given:
+        oldBob.addToPets(new Pet(name:"Lucky")).save(flush:true)
+        hibernateQuery.join("pets").projections().property("pets.name").property("lastName")
+        when:
+        def answers = hibernateQuery.singleResult()
+        then:
+        answers[0] == "Lucky"
+        answers[1] == "Builder"
+
+    }
+
     def leftJoin() {
         given:
         hibernateQuery.join("pets", JoinType.LEFT)
@@ -259,18 +271,18 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         given:
         hibernateQuery.projections().property("lastName")
         when:
-        def count = hibernateQuery.singleResult()
+        def lastName = hibernateQuery.singleResult()
         then:
-        count[0] == "Builder"
+        lastName == "Builder"
     }
 
     def projectionId() {
         given:
         hibernateQuery.projections().id()
         when:
-        def count = hibernateQuery.singleResult()
+        def id = hibernateQuery.singleResult()
         then:
-        count[0] == oldBob.id
+        id == oldBob.id
     }
 
     def count() {
@@ -280,7 +292,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         when:
         def count = hibernateQuery.singleResult()
         then:
-        count[0] == 2
+        count == 2
     }
 
     def max() {
@@ -290,7 +302,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         when:
         def age = hibernateQuery.singleResult()
         then:
-        age[0] == 50
+        age == 50
     }
 
     def min() {
@@ -300,7 +312,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         when:
         def age = hibernateQuery.singleResult()
         then:
-        age[0] == 50
+        age == 50
     }
 
     def sum() {
@@ -310,7 +322,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         when:
         def age = hibernateQuery.singleResult()
         then:
-        age[0] == 102
+        age == 102
     }
 
     def avg() {
@@ -320,7 +332,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         when:
         def age = hibernateQuery.singleResult()
         then:
-        age[0] == 51
+        age == 51
     }
 
     def groupByLastNameAverageAge() {
