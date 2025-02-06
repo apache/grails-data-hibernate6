@@ -16,19 +16,20 @@ import spock.lang.Specification
 /**
  * Created by graemerocher on 24/10/16.
  */
-class DetachedCriteriaProjectionSpec extends Specification {
-
-    @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(Entity1, Entity2, DetachedEntity)
-    @Shared PlatformTransactionManager transactionManager = datastore.getTransactionManager()
+class DetachedCriteriaProjectionSpec extends HibernateGormDatastoreSpec {
+    
 
     @Transactional
     def setup() {
-        DetachedEntity.findAll().each { it.delete() }
-        Entity1.findAll().each { it.delete(flush: true) }
-        final entity1 = new Entity1(field1: 'Correct').save()
-        new Entity1(field1: 'Incorrect', version: 0).save()
-        new DetachedEntity(entityId: entity1.id, field: 'abc').save()
-        new DetachedEntity(entityId: entity1.id, field: 'def').save()
+        final entity1 = new Entity1(field1: 'Correct').save(flush:true)
+        new Entity1(field1: 'Incorrect', version: 0).save(flush:true)
+        new DetachedEntity(entityId: entity1.id, field: 'abc').save(flush:true)
+        new DetachedEntity(entityId: entity1.id, field: 'def').save(flush:true)
+    }
+
+    @Override
+    List getDomainClasses(){
+        return [Entity1, Entity2, DetachedEntity]
     }
 
     @Rollback

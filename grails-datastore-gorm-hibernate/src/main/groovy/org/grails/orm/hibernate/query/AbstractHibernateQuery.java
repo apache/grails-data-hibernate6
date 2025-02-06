@@ -75,7 +75,7 @@ public abstract class AbstractHibernateQuery extends Query {
     protected LinkedList<Association> associationStack = new LinkedList<Association>();
     protected LinkedList aliasInstanceStack = new LinkedList();
     private boolean hasJoins = false;
-    private DetachedCriteria detachedCriteria;
+    protected DetachedCriteria detachedCriteria;
 
     protected AbstractHibernateQuery(AbstractHibernateSession session, PersistentEntity entity) {
         super(session, entity);
@@ -141,6 +141,40 @@ public abstract class AbstractHibernateQuery extends Query {
             }
             fullPath.append(propertyName);
             return fullPath.toString();
+        }
+    }
+
+    public void add(Criterion criterion) {
+        if (criterion instanceof Between c) {
+           between(c.getProperty(),c.getFrom(),c.getTo());
+        } else if (criterion instanceof Equals c) {
+            eq(c.getProperty(),c.getValue());
+        } else if (criterion instanceof GreaterThanEquals c) {
+            ge(c.getProperty(),c.getValue());
+        } else if (criterion instanceof GreaterThan c) {
+            gt(c.getProperty(),c.getValue());
+        } else if (criterion instanceof IdEquals c) {
+            idEq(c.getValue());
+        } else if (criterion instanceof ILike c) {
+            ilike(c.getProperty(), c.getValue().toString());
+        } else if (criterion instanceof In c) {
+            in(c.getProperty(), c.getValues().stream().toList());
+        } else if (criterion instanceof IsEmpty c) {
+            isEmpty(c.getProperty());
+        } else if (criterion instanceof IsNotEmpty c) {
+            isNotEmpty(c.getProperty());
+        } else if (criterion instanceof IsNull c) {
+            isNull(c.getProperty());
+        } else if (criterion instanceof IsNotNull c) {
+            isNotNull(c.getProperty());
+        } else if (criterion instanceof RLike c) {
+            rlike(c.getProperty(), c.getValue().toString());
+        } else if (criterion instanceof Like c) {
+            like(c.getProperty(), c.getValue().toString());
+        } else if (criterion instanceof LessThanEquals c) {
+            le(c.getProperty(),c.getValue());
+        } else if (criterion instanceof LessThan c) {
+            lt(c.getProperty(),c.getValue());
         }
     }
 
@@ -262,8 +296,9 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query rlike(String property, String expr) {
-        detachedCriteria.rlike(property, expr);
-        return this;
+        throw new UnsupportedOperationException("Needs RLIKE extension");
+//        detachedCriteria.rlike(property, expr);
+//        return this;
     }
 
 
@@ -349,6 +384,12 @@ public abstract class AbstractHibernateQuery extends Query {
     @Override
     public Query join(String property) {
         detachedCriteria.join(property);
+        return this;
+    }
+
+    @Override
+    public Query join(String property, JoinType joinType) {
+        detachedCriteria.join(property,joinType);
         return this;
     }
 
@@ -630,7 +671,6 @@ public abstract class AbstractHibernateQuery extends Query {
 
         @Override
         public void add(Criterion criterion) {
-
         }
 
         @Override

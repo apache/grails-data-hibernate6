@@ -1,10 +1,10 @@
 package grails.gorm.tests
 
-class ReadOperationSpec extends GormDatastoreSpec {
+class ReadOperationSpec extends HibernateGormDatastoreSpec {
 
     void "test read operation for non existent"() {
         expect:
-        TestEntity.read(10) == null
+        TestEntity.read() == null
     }
 
     void "test read operation"() {

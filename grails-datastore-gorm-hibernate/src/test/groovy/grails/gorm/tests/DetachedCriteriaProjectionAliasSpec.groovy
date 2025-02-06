@@ -11,21 +11,22 @@ import spock.lang.Shared
 import spock.lang.Specification
 
 
-class DetachedCriteriaProjectionAliasSpec extends Specification {
+class DetachedCriteriaProjectionAliasSpec extends HibernateGormDatastoreSpec {
 
-    @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(Entity1, Entity2, DetachedEntity)
-    @Shared PlatformTransactionManager transactionManager = datastore.getTransactionManager()
+    def entity1
+    def entity2
 
     @Transactional
     def setup() {
-        DetachedEntity.findAll().each { it.delete() }
-        Entity1.findAll().each { it.delete(flush: true) }
-        Entity2.findAll().each { it.delete(flush: true) }
-        final entity1 = new Entity1(id: 1, field1: 'E1').save()
-        final entity2 = new Entity2(id: 2, field: 'E2', parent: entity1).save()
+        entity1 = new Entity1(field1: 'E1').save(flush:true)
+        entity2 = new Entity2(field: 'E2', parent: entity1).save(flush:true)
         entity1.addToChildren(entity2)
-        new DetachedEntity(id: 1, entityId: entity1.id, field: 'DE1').save()
-        new DetachedEntity(id: 2, entityId: entity1.id, field: 'DE2').save()
+        new DetachedEntity(entityId: entity1.id, field: 'DE1').save(flush:true)
+        new DetachedEntity( entityId: entity1.id, field: 'DE2').save(flush:true)
+    }
+
+    List getDomainClasses() {
+        [Entity1,Entity2,DetachedEntity]
     }
 
     @Rollback
@@ -44,7 +45,7 @@ class DetachedCriteriaProjectionAliasSpec extends Specification {
             "in"("entityId", detachedCriteria)
         }
         then:
-        res.entityId.first() == 1L
+        res.entityId.first() == entity1.id
     }
 
 
@@ -64,6 +65,6 @@ class DetachedCriteriaProjectionAliasSpec extends Specification {
             "in"("entityId", detachedCriteria)
         }
         then:
-        res.entityId.first() == 2L
+        res.entityId.first() == entity2.id
     }
 }

@@ -10,6 +10,7 @@ import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.exceptions.GrailsQueryException
 
 import org.grails.orm.hibernate.query.HibernateHqlQuery
+import org.grails.orm.hibernate.query.HibernateQuery
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.DynamicFinder
@@ -97,20 +98,10 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
 
         if(persistentEntity.isMultiTenant()) {
             // for multi-tenant entities we process get(..) via a query
-            throw new UnsupportedOperationException("no yet")
-//            (D)hibernateTemplate.execute(  { Session session ->
-//                CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder()
-//                CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(persistentEntity.javaClass)
-//                Root queryRoot = criteriaQuery.from(persistentEntity.javaClass)
-//                criteriaQuery = criteriaQuery.where (
-//                        //TODO: Remove explicit type cast once GROOVY-9460
-//                        criteriaBuilder.equal((Expression<?>) queryRoot.get(persistentEntity.identity.name), id)
-//                )
-//                Query criteria = session.createQuery(criteriaQuery)
-//                HibernateHqlQuery hibernateHqlQuery = new HibernateHqlQuery(
-//                        hibernateSession, persistentEntity, criteria)
-//                return  hibernateHqlQuery.singleResult()
-//            } )
+//            throw new UnsupportedOperationException("no yet")
+            (D)hibernateTemplate.execute(  { Session session ->
+                return new HibernateQuery(hibernateSession,persistentEntity ).idEq(id).singleResult()
+            } )
         }
         else {
             // for non multi-tenant entities we process get(..) via the second level cache
@@ -133,19 +124,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
         }
         
         (D)hibernateTemplate.execute(  { Session session ->
-            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder()
-            CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(persistentEntity.javaClass)
-
-            Root queryRoot = criteriaQuery.from(persistentEntity.javaClass)
-            criteriaQuery = criteriaQuery.where (
-                    //TODO: Remove explicit type cast once GROOVY-9460
-                    criteriaBuilder.equal((Expression<?>)  queryRoot.get(persistentEntity.identity.name), id)
-            )
-            Query criteria = session.createQuery(criteriaQuery)
-                                    .setHint(QueryHints.HINT_READONLY, true)
-            HibernateHqlQuery hibernateHqlQuery = new HibernateHqlQuery(
-                    hibernateSession, persistentEntity, criteria)
-            return  hibernateHqlQuery.singleResult()
+            return new HibernateQuery(hibernateSession,persistentEntity ).idEq(id).singleResult()
 
         } )
     }
@@ -213,22 +192,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
     boolean exists(Serializable id) {
         id = convertIdentifier(id)
         hibernateTemplate.execute  { Session session ->
-            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder()
-            CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(persistentEntity.javaClass)
-            Root queryRoot = criteriaQuery.from(persistentEntity.javaClass)
-            def idProp = queryRoot.get(persistentEntity.identity.name)
-            criteriaQuery = criteriaQuery.where (
-                    //TODO: Remove explicit type cast once GROOVY-9460
-                    criteriaBuilder.equal((Expression<?>) idProp, id)
-            )
-            criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(persistentEntity.javaClass)))
-            Query criteria = session.createQuery(criteriaQuery)
-            HibernateHqlQuery hibernateHqlQuery = new HibernateHqlQuery(
-                    hibernateSession, persistentEntity, criteria)
-
-            hibernateTemplate.applySettings(criteria)
-            Boolean result = hibernateHqlQuery.singleResult()
-            return result
+            return new HibernateQuery(hibernateSession,persistentEntity ).idEq(id).list().size()  > 0
         }
     }
 

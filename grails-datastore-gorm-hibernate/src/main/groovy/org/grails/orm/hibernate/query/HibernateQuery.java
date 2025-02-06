@@ -17,6 +17,7 @@ package org.grails.orm.hibernate.query;
 
 
 
+import grails.gorm.DetachedCriteria;
 import jakarta.persistence.criteria.CriteriaQuery;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 
@@ -49,8 +50,8 @@ public class HibernateQuery extends AbstractHibernateQuery {
      * TODO FIX THIS
      * @return The hibernate criteria
      */
-    public CriteriaQuery getHibernateCriteria() {
-        return null;
+    public DetachedCriteria getHibernateCriteria() {
+        return detachedCriteria;
     }
 
     @Override
