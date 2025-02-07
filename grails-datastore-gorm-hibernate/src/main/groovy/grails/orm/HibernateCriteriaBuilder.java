@@ -19,12 +19,10 @@ import grails.gorm.DetachedCriteria;
 import groovy.lang.GroovySystem;
 import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.PluralAttribute;
-import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.orm.hibernate.AbstractHibernateDatastore;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
 import org.grails.orm.hibernate.HibernateDatastore;
 import org.grails.orm.hibernate.query.AbstractHibernateCriteriaBuilder;
-import org.grails.orm.hibernate.query.AbstractHibernateQuery;
-import org.grails.orm.hibernate.query.HibernateQuery;
 import org.hibernate.SessionFactory;
 import org.hibernate.type.BasicTypeReference;
 import org.hibernate.type.StandardBasicTypes;
@@ -119,8 +117,8 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
     public static final BasicTypeReference<Serializable> SERIALIZABLE = StandardBasicTypes.SERIALIZABLE;
 
     @SuppressWarnings("rawtypes")
-    public HibernateCriteriaBuilder(Class targetClass, SessionFactory sessionFactory) {
-        super(targetClass, sessionFactory);
+    public HibernateCriteriaBuilder(Class targetClass, SessionFactory sessionFactory, AbstractHibernateDatastore datastore) {
+        super(targetClass, sessionFactory, datastore);
         setDefaultFlushMode(GrailsHibernateTemplate.FLUSH_AUTO);
     }
 

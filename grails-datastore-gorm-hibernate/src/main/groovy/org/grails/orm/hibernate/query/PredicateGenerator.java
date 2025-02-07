@@ -90,20 +90,47 @@ public class PredicateGenerator {
                         return cb.like(root_.get(c.getProperty()), c.getValue().toString());
                     } else if (criterion instanceof Query.In c
                             && Objects.nonNull(c.getSubquery())
-                            && c.getSubquery().getProjections().size() == 1
+                            && !c.getSubquery().getProjections().isEmpty()
                             && c.getSubquery().getProjections().get(0) instanceof Query.PropertyProjection
                     ) {
                         Query.PropertyProjection projection = (Query.PropertyProjection) c.getSubquery().getProjections().get(0);
                         boolean distinct = projection instanceof Query.DistinctPropertyProjection;
-                        Subquery subquery = criteriaQuery.subquery(Long.class);
+                        Subquery subquery = criteriaQuery.subquery(Object.class);
                         Root from = subquery.from(c.getSubquery().getPersistentEntity().getJavaClass());
                         Predicate[] predicates = getPredicates(cb, criteriaQuery, from, c.getSubquery().getCriteria());
                         subquery.select(from.get(projection.getPropertyName())).distinct(distinct).where(cb.and(predicates));
                         return cb.in(root_.get(c.getProperty())).value(subquery);
                     } else if (criterion instanceof Query.In c
+                            && Objects.nonNull(c.getSubquery())
+                            && !c.getSubquery().getProjections().isEmpty()
+                            && c.getSubquery().getProjections().get(0) instanceof Query.IdProjection
+                    ) {
+                        Subquery subquery = criteriaQuery.subquery(Object.class);
+                        Root from = subquery.from(c.getSubquery().getPersistentEntity().getJavaClass());
+                        Predicate[] predicates = getPredicates(cb, criteriaQuery, from, c.getSubquery().getCriteria());
+                        subquery.select(from).where(cb.and(predicates));
+                        return cb.in(root_.get("id")).value(subquery);
+                    } else if (criterion instanceof Query.In c
                             && !c.getValues().isEmpty()
                     ) {
                         return cb.in(root_.get(c.getProperty()), c.getValues());
+                    } else if (criterion instanceof Query.SubqueryCriterion c) {
+                        Subquery subquery = criteriaQuery.subquery(Number.class);
+                        Root from = subquery.from(c.getValue().getPersistentEntity().getJavaClass());
+                        Predicate[] predicates = getPredicates(cb, criteriaQuery, from, c.getValue().getCriteria());
+                        if (c instanceof Query.GreaterThanEqualsAll sc ) {
+                            subquery.select(cb.max(from.get(c.getProperty()))).where(cb.and(predicates));
+                            return cb.greaterThanOrEqualTo(root_.get(sc.getProperty()),subquery);
+                        } else if (c instanceof Query.GreaterThanAll sc ) {
+                            subquery.select(cb.max(from.get(c.getProperty()))).where(cb.and(predicates));
+                            return cb.greaterThan(root_.get(sc.getProperty()),subquery);
+                        } else if (c instanceof Query.LessThanEqualsAll sc ) {
+                            subquery.select(cb.min(from.get(c.getProperty()))).where(cb.and(predicates));
+                            return cb.lessThanOrEqualTo(root_.get(sc.getProperty()),subquery);
+                        } else if (c instanceof Query.LessThanAll sc ) {
+                            subquery.select(cb.min(from.get(c.getProperty()))).where(cb.and(predicates));
+                            return cb.lessThan(root_.get(sc.getProperty()),subquery);
+                        }
                     }
                     return null;
                 }).filter(Objects::nonNull).toList().toArray(new Predicate[0]);

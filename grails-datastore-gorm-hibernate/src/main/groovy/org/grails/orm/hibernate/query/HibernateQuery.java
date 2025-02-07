@@ -18,7 +18,11 @@ package org.grails.orm.hibernate.query;
 
 
 import grails.gorm.DetachedCriteria;
+import groovy.lang.Closure;
 import jakarta.persistence.criteria.CriteriaQuery;
+import org.grails.datastore.mapping.query.Query;
+import org.grails.datastore.mapping.query.Restrictions;
+import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -28,6 +32,8 @@ import org.hibernate.SessionFactory;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.persister.entity.PropertyMapping;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
+
+import java.util.List;
 
 /**
  * Bridges the Query API with the Hibernate Criteria API
@@ -54,6 +60,63 @@ public class HibernateQuery extends AbstractHibernateQuery {
         return detachedCriteria;
     }
 
+    public Query inList(String propertyName, QueryableCriteria<?> subquery) {
+        detachedCriteria.inList(propertyName,subquery);
+        return this;
+    }
+
+
+    public Query gtAll(String propertyName, QueryableCriteria<?> subquery) {
+        detachedCriteria.gtAll(propertyName,subquery);
+        return this;
+    }
+
+    public Query geAll(String propertyName, QueryableCriteria<?> subquery) {
+        detachedCriteria.geAll(propertyName,subquery);
+        return this;
+    }
+
+    public Query ltAll(String propertyName, QueryableCriteria<?> subquery) {
+        detachedCriteria.ltAll(propertyName,subquery);
+        return this;
+    }
+
+    public Query leAll(String propertyName, QueryableCriteria<?> subquery) {
+        detachedCriteria.leAll(propertyName,subquery);
+        return this;
+    }
+
+    public Query and(Closure closure) {
+        detachedCriteria.and(closure);
+        return this;
+    }
+
+    public Query or(Closure closure) {
+        detachedCriteria.or(closure);
+        return this;
+    }
+
+    public Query not(Criterion a, Criterion b) {
+        Closure addClosure = new Closure(this) {
+            public void doCall() {
+                DetachedCriteria owner = (DetachedCriteria) getDelegate();
+                owner.add(Restrictions.or(a,b));
+            }
+        };
+        detachedCriteria.not(addClosure);
+        return this;
+    }
+
+    public Query not(Closure closure) {
+        detachedCriteria.not(closure);
+        return this;
+    }
+
+
+
+
+
+    //TODO verify this is complete
     @Override
     public Object clone() {
         final HibernateSession hibernateSession = (HibernateSession) getSession();

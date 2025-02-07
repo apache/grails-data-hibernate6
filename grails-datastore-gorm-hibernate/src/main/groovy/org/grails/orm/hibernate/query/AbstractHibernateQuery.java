@@ -416,7 +416,7 @@ public abstract class AbstractHibernateQuery extends Query {
         try {
             return createQuery().getSingleResult();
         }
-        catch (jakarta.persistence.NoResultException e) {
+        catch (Throwable e) {
            return null;
         }
     }
