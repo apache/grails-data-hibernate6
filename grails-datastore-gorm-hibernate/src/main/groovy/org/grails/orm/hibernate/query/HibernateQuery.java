@@ -22,6 +22,7 @@ import groovy.lang.Closure;
 import jakarta.persistence.criteria.CriteriaQuery;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.Restrictions;
+import org.grails.datastore.mapping.query.api.Criteria;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 
@@ -86,6 +87,31 @@ public class HibernateQuery extends AbstractHibernateQuery {
         return this;
     }
 
+    public Query gtSome(String propertyName, QueryableCriteria<?> subquery) {
+        detachedCriteria.gtSome(propertyName,subquery);
+        return this;
+    }
+
+    public Query geSome(String propertyName, QueryableCriteria<?> subquery) {
+        detachedCriteria.geSome(propertyName,subquery);
+        return this;
+    }
+
+    public Query ltSome(String propertyName, QueryableCriteria<?> subquery) {
+        detachedCriteria.ltSome(propertyName,subquery);
+        return this;
+    }
+
+    public Query leSome(String propertyName, QueryableCriteria<?> subquery) {
+        detachedCriteria.leSome(propertyName,subquery);
+        return this;
+    }
+
+    public Query eqAll(String propertyName, QueryableCriteria propertyValue){
+        detachedCriteria.eqAll(propertyName,propertyValue);
+        return this;
+    }
+
     public Query and(Closure closure) {
         detachedCriteria.and(closure);
         return this;
@@ -109,6 +135,77 @@ public class HibernateQuery extends AbstractHibernateQuery {
 
     public Query not(Closure closure) {
         detachedCriteria.not(closure);
+        return this;
+    }
+
+    public Query ne(String propertyName, Object propertyValue) {
+        detachedCriteria.ne(propertyName, propertyValue);
+        return this;
+    }
+
+    public Query eqProperty(String propertyName, String otherPropertyName) {
+        detachedCriteria.eqProperty(propertyName,otherPropertyName);
+        return this;
+    }
+
+    public Query neProperty(String propertyName, String otherPropertyName) {
+        detachedCriteria.neProperty(propertyName,otherPropertyName);
+        return this;
+    }
+
+    public Query gtProperty(String propertyName, String otherPropertyName) {
+        detachedCriteria.gtProperty(propertyName,otherPropertyName);
+        return this;
+    }
+
+
+    public Query geProperty(String propertyName, String otherPropertyName) {
+        detachedCriteria.geProperty(propertyName,otherPropertyName);
+        return this;
+    }
+
+    public Query ltProperty(String propertyName, String otherPropertyName) {
+        detachedCriteria.ltProperty(propertyName,otherPropertyName);
+        return this;
+    }
+
+    public Query leProperty(String propertyName, String otherPropertyName) {
+        detachedCriteria.leProperty(propertyName,otherPropertyName);
+        return this;
+    }
+
+     public Query sizeEq(String propertyName, int size) {
+         detachedCriteria.sizeEq(propertyName, size);
+         return this;
+    }
+
+
+     public Query sizeGt(String propertyName, int size) {
+        detachedCriteria.sizeGt(propertyName, size);
+        return this;
+    }
+
+
+     public Query sizeGe(String propertyName, int size) {
+        detachedCriteria.sizeGe(propertyName, size);
+        return this;
+    }
+
+
+     public Query sizeLe(String propertyName, int size) {
+        detachedCriteria.sizeLe(propertyName, size);
+        return this;
+    }
+
+
+     public Query sizeLt(String propertyName, int size) {
+        detachedCriteria.sizeLt(propertyName, size);
+        return this;
+    }
+
+
+     public Query sizeNe(String propertyName, int size) {
+        detachedCriteria.sizeNe(propertyName, size);
         return this;
     }
 

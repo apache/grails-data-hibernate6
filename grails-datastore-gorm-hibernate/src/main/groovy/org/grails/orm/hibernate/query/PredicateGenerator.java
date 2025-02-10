@@ -9,6 +9,7 @@ import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import org.grails.datastore.mapping.query.Query;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
+import org.hibernate.query.criteria.JpaExpression;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +51,20 @@ public class PredicateGenerator {
                         return cb.isEmpty(root_.get(c.getProperty()));
                     } else if (criterion instanceof Query.Equals c) {
                         return cb.equal(root_.get(c.getProperty()), c.getValue());
+                    } else if (criterion instanceof Query.NotEquals c) {
+                        return cb.notEqual(root_.get(c.getProperty()), c.getValue());
+                    } else if (criterion instanceof Query.EqualsProperty c) {
+                        return cb.equal(root_.get(c.getProperty()), root_.get(c.getOtherProperty()));
+                    } else if (criterion instanceof Query.NotEqualsProperty c) {
+                        return cb.notEqual(root_.get(c.getProperty()), root_.get(c.getOtherProperty()));
+                    } else if (criterion instanceof Query.LessThanEqualsProperty c) {
+                        return cb.le(root_.get(c.getProperty()), root_.get(c.getOtherProperty()));
+                    } else if (criterion instanceof Query.LessThanProperty c) {
+                        return cb.lt(root_.get(c.getProperty()), root_.get(c.getOtherProperty()));
+                    } else if (criterion instanceof Query.GreaterThanEqualsProperty c) {
+                        return cb.ge(root_.get(c.getProperty()), root_.get(c.getOtherProperty()));
+                    } else if (criterion instanceof Query.GreaterThanProperty c) {
+                        return cb.gt(root_.get(c.getProperty()), root_.get(c.getOtherProperty()));
                     } else if (criterion instanceof Query.IdEquals c) {
                         return cb.equal(root_.get("id"), c.getValue());
                     } else if (criterion instanceof Query.GreaterThan c) {
@@ -88,6 +103,16 @@ public class PredicateGenerator {
                         return cb.like(root_.get(c.getProperty()), c.getPattern(), '\\');
                     } else if (criterion instanceof Query.Like c) {
                         return cb.like(root_.get(c.getProperty()), c.getValue().toString());
+                    } else if (criterion instanceof Query.SizeEquals c) {
+                        return cb.equal(cb.size(root_.get(c.getProperty())),c.getValue());
+                    } else if (criterion instanceof Query.SizeGreaterThan c) {
+                        return cb.gt(cb.size(root_.get(c.getProperty())),(Number) c.getValue());
+                    } else if (criterion instanceof Query.SizeGreaterThanEquals c) {
+                        return cb.ge(cb.size(root_.get(c.getProperty())),(Number) c.getValue());
+                    } else if (criterion instanceof Query.SizeLessThan c) {
+                        return cb.lt(cb.size(root_.get(c.getProperty())),(Number) c.getValue());
+                    } else if (criterion instanceof Query.LessThanEquals c) {
+                        return cb.le(root_.get(c.getProperty()), (Number) c.getValue());
                     } else if (criterion instanceof Query.In c
                             && Objects.nonNull(c.getSubquery())
                             && !c.getSubquery().getProjections().isEmpty()
@@ -130,6 +155,21 @@ public class PredicateGenerator {
                         } else if (c instanceof Query.LessThanAll sc ) {
                             subquery.select(cb.min(from.get(c.getProperty()))).where(cb.and(predicates));
                             return cb.lessThan(root_.get(sc.getProperty()),subquery);
+                        } else if (c instanceof Query.EqualsAll sc) {
+                            subquery.select(from.get(c.getProperty())).where(cb.and(predicates));
+                            return cb.equal(root_.get(sc.getProperty()),subquery);
+                        } else if (c instanceof Query.GreaterThanEqualsSome sc ) {
+                            subquery.select(cb.max(from.get(c.getProperty()))).where(cb.or(predicates));
+                            return cb.greaterThanOrEqualTo(root_.get(sc.getProperty()),subquery);
+                        } else if (c instanceof Query.GreaterThanSome sc ) {
+                            subquery.select(cb.max(from.get(c.getProperty()))).where(cb.or(predicates));
+                            return cb.greaterThan(root_.get(sc.getProperty()),subquery);
+                        } else if (c instanceof Query.LessThanEqualsSome sc ) {
+                            subquery.select(cb.min(from.get(c.getProperty()))).where(cb.or(predicates));
+                            return cb.lessThanOrEqualTo(root_.get(sc.getProperty()),subquery);
+                        } else if (c instanceof Query.LessThanSome sc ) {
+                            subquery.select(cb.min(from.get(c.getProperty()))).where(cb.or(predicates));
+                            return cb.lessThan(root_.get(sc.getProperty()), subquery);
                         }
                     }
                     return null;

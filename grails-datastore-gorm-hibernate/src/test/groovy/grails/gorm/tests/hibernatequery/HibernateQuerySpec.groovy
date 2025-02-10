@@ -18,6 +18,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     HibernateQuery hibernateQuery
     HibernateQuery petHibernateQuery
+    HibernateQuery eagerHibernateQuery
 
     Person oldBob
 
@@ -26,11 +27,12 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         AbstractHibernateSession session = hibernateDatastore.connect() as AbstractHibernateSession
         hibernateQuery = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(Person.typeName))
         petHibernateQuery = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(Pet.typeName))
+        eagerHibernateQuery = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(EagerOwner.typeName))
         oldBob = new Person(firstName: "Bob", lastName: "Builder", age: 50).save(flush: true)
     }
 
     List getDomainClasses() {
-        [Person]
+        [Person,EagerOwner]
     }
 
     def equals() {
@@ -42,6 +44,76 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         then:
         oldBob == newBob
     }
+
+    def ne() {
+        given:
+        new Person(firstName: "Fred", lastName: "Rogers", age: 51).save(flush: true)
+        hibernateQuery.ne("age", 51)
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def eqProperty() {
+        given:
+        def oldMajor = new Person(firstName: "Major", lastName: "Major", age: 51).save(flush: true)
+        hibernateQuery.eqProperty("firstName", "lastName")
+        when:
+        def newMajor = hibernateQuery.singleResult()
+        then:
+        oldMajor == newMajor
+    }
+
+    def neProperty() {
+        given:
+        hibernateQuery.neProperty("firstName", "lastName")
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def leProperty() {
+        given:
+        def oldEager = new EagerOwner(column1: 1, column2: 2).save(flush: true)
+        eagerHibernateQuery.leProperty("column1", "column2")
+        when:
+        def newEager = eagerHibernateQuery.singleResult()
+        then:
+        oldEager == newEager
+    }
+
+    def ltProperty() {
+        given:
+        def oldEager = new EagerOwner(column1: 1, column2: 2).save(flush: true)
+        eagerHibernateQuery.ltProperty("column1", "column2")
+        when:
+        def newEager = eagerHibernateQuery.singleResult()
+        then:
+        oldEager == newEager
+    }
+
+    def geProperty() {
+        given:
+        def oldEager = new EagerOwner(column1: 2, column2: 1).save(flush: true)
+        eagerHibernateQuery.geProperty("column1", "column2")
+        when:
+        def newEager = eagerHibernateQuery.singleResult()
+        then:
+        oldEager == newEager
+    }
+
+    def gtProperty() {
+        given:
+        def oldEager = new EagerOwner(column1: 2, column2: 1).save(flush: true)
+        eagerHibernateQuery.gtProperty("column1", "column2")
+        when:
+        def newEager = eagerHibernateQuery.singleResult()
+        then:
+        oldEager == newEager
+    }
+
 
     @Ignore("Need better implementation of Predicate")
     def idEq() {
@@ -245,7 +317,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
 
     def lessThanEqualsAll() {
-        new Person(firstName: "Fred", lastName: "Rogers", age: 48).save(flush: true)
+        new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
         given:
         hibernateQuery.leAll("age", new DetachedCriteria(Person).eq("age",50).property("age"))
         when:
@@ -255,9 +327,9 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     }
 
     def lessThanAll() {
-        new Person(firstName: "Fred", lastName: "Rogers", age: 48).save(flush: true)
+        new Person(firstName: "Fred", lastName: "Builder", age: 52).save(flush: true)
         given:
-        hibernateQuery.ltAll("age", new DetachedCriteria(Person).eq("age",48).property("age"))
+        hibernateQuery.ltAll("age", new DetachedCriteria(Person).eq("age",52).property("age"))
         when:
         def newBob = hibernateQuery.singleResult()
         then:
@@ -269,6 +341,71 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         new Person(firstName: "Fred", lastName: "Rogers", age: 48).save(flush: true)
         given:
         hibernateQuery.geAll("age", new DetachedCriteria(Person).eq("age",50).property("age"))
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def greaterThanSome() {
+        new Person(firstName: "Fred", lastName: "Rogers", age: 48).save(flush: true)
+        given:
+        hibernateQuery.gtSome("age", new DetachedCriteria(Person)
+                .eq("age",48)
+                .eq("firstName","Chuck")
+                .property("age"))
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+
+    def lessThanEqualsSome() {
+        new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
+        given:
+        hibernateQuery.leSome("age",
+                new DetachedCriteria(Person)
+                        .eq("age",50)
+                        .eq("firstName","Chuck")
+                        .property("age"))
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def lessThanSome() {
+        new Person(firstName: "Fred", lastName: "Builder", age: 52).save(flush: true)
+        given:
+        hibernateQuery.ltSome("age", new DetachedCriteria(Person)
+                .eq("age",52)
+                .eq("firstName","Chuck")
+                .property("age"))
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+
+    def greaterThanEqualsSome() {
+        new Person(firstName: "Fred", lastName: "Rogers", age: 48).save(flush: true)
+        given:
+        hibernateQuery.geSome("age", new DetachedCriteria(Person)
+                .eq("age",50)
+                .eq("firstName","Chuck")
+                .property("age"))
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def equalsAll() {
+        new Person(firstName: "Fred", lastName: "Rogers", age: 48).save(flush: true)
+        given:
+        hibernateQuery.eqAll("age", new DetachedCriteria(Person).eq("age",50).property("age"))
         when:
         def newBob = hibernateQuery.singleResult()
         then:
@@ -420,11 +557,73 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         result[1] == 51
     }
 
+    def sizeEquals() {
+        given:
+        Pet pet = new Pet(name: "Lucky")
+        oldBob.addToPets(pet)
+        oldBob.save(flush: true)
+        hibernateQuery.sizeEq("pets", 1)
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def sizeGe() {
+        given:
+        Pet pet = new Pet(name: "Lucky")
+        oldBob.addToPets(pet)
+        oldBob.save(flush: true)
+        hibernateQuery.sizeGe("pets", 1)
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def sizeGt() {
+        given:
+        Pet pet = new Pet(name: "Lucky")
+        oldBob.addToPets(pet)
+        oldBob.save(flush: true)
+        hibernateQuery.sizeGt("pets", 0)
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def sizeLe() {
+        given:
+        Pet pet = new Pet(name: "Lucky")
+        oldBob.addToPets(pet)
+        oldBob.save(flush: true)
+        hibernateQuery.sizeGe("pets", 1)
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
+    def sizeLt() {
+        given:
+        Pet pet = new Pet(name: "Lucky")
+        oldBob.addToPets(pet)
+        oldBob.save(flush: true)
+        hibernateQuery.sizeLt("pets", 2)
+        when:
+        def newBob = hibernateQuery.singleResult()
+        then:
+        oldBob == newBob
+    }
+
 }
 
 @Entity
 class EagerOwner implements Serializable {
     Set<Pet> pets = [] as Set
+    Integer column1
+    Integer column2
     static hasMany = [pets: Pet]
     static mapping = {
         pets lazy : false

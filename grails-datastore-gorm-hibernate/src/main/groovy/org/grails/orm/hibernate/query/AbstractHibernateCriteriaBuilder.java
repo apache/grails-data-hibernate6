@@ -8,6 +8,7 @@ import groovy.lang.GroovyObjectSupport;
 import groovy.lang.MetaClass;
 import groovy.lang.MetaMethod;
 import groovy.lang.MissingMethodException;
+import groovy.util.logging.Slf4j;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Root;
@@ -27,6 +28,8 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.transform.ResultTransformer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.convert.ConversionService;
 import org.grails.datastore.mapping.query.api.ProjectionList;
 
@@ -36,6 +39,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Abstract super class for sharing code between Hibernate 3 and 4 implementations of HibernateCriteriaBuilder
@@ -43,6 +47,7 @@ import java.util.Map;
  * @author Graeme Rocher
  * @since 3.0.7
  */
+@Slf4j
 public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSupport implements org.grails.datastore.mapping.query.api.BuildableCriteria, org.grails.datastore.mapping.query.api.ProjectionList  {
 
     public static final String AND = "and"; // builder
@@ -82,6 +87,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     protected static final String SCROLL_CALL = "scroll";
     protected static final String SET_RESULT_TRANSFORMER_CALL = "setResultTransformer";
     protected static final String PROJECTIONS = "projections";
+    private static final Logger log = LoggerFactory.getLogger(AbstractHibernateCriteriaBuilder.class);
 
 
     protected SessionFactory sessionFactory;
@@ -256,19 +262,6 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         return targetClass;
     }
 
-    /**
-     * Calculates the property value, converting GStrings if necessary
-     *
-     * @param propertyValue The property value
-     * @return The calculated property value
-     */
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    protected Object calculatePropertyValue(Object propertyValue) {
-        if (propertyValue instanceof CharSequence) {
-            return propertyValue.toString();
-        }
-        return propertyValue;
-    }
 
     protected abstract DetachedCriteria convertToHibernateCriteria(QueryableCriteria<?> queryableCriteria);
 
@@ -288,10 +281,15 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @param alias The alias to use
      */
     public void count(String propertyName, String alias) {
+        hibernateQuery.projections().countDistinct(getFullyQualifiedColumn(propertyName, alias));
+    }
 
+    private static String getFullyQualifiedColumn(String propertyName, String alias) {
+        return (Objects.nonNull(alias) ? alias + "." : "") + propertyName;
     }
 
     public ProjectionList id() {
+        hibernateQuery.projections().id();
         return this;
     }
 
@@ -314,11 +312,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @param propertyName The name of the property
      */
     public ProjectionList groupProperty(String propertyName) {
-        groupProperty(propertyName, null);
-        return this;
+        return groupProperty(propertyName, null);
     }
 
     public ProjectionList distinct() {
+        hibernateQuery.projections().distinct();
         return this;
     }
 
@@ -329,6 +327,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @param alias The alias to use
      */
     public ProjectionList countDistinct(String propertyName, String alias) {
+        hibernateQuery.projections().countDistinct(getFullyQualifiedColumn(propertyName,alias));
         return this;
     }
 
@@ -340,6 +339,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @param alias The alias to use
      */
     public ProjectionList groupProperty(String propertyName, String alias) {
+        hibernateQuery.projections().groupProperty(getFullyQualifiedColumn(propertyName,alias));
         return this;
     }
 
@@ -359,6 +359,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @param alias The alias to use
      */
     public ProjectionList max(String propertyName, String alias) {
+        hibernateQuery.projections().max(getFullyQualifiedColumn(propertyName,alias));
         return this;
     }
 
@@ -377,25 +378,20 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @param alias The alias to use
      */
     public ProjectionList min(String propertyName, String alias) {
+        hibernateQuery.projections().max(getFullyQualifiedColumn(propertyName,alias));
         return this;
     }
+
+
 
     /**
      * Adds a projection that allows the criteria to return the row count
      *
      */
     public ProjectionList rowCount() {
-        return rowCount(null);
+        return count();
     }
 
-    /**
-     * Adds a projection that allows the criteria to return the row count
-     *
-     * @param alias The alias to use
-     */
-    public ProjectionList rowCount(String alias) {
-        return this;
-    }
 
     /**
      * Adds a projection that allows the criteria to retrieve the sum of the results of a property
@@ -413,6 +409,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @param alias The alias to use
      */
     public ProjectionList sum(String propertyName, String alias) {
+        hibernateQuery.projections().sum(getFullyQualifiedColumn(propertyName,alias));
         return this;
     }
 
@@ -423,6 +420,12 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @param fetchMode The fetch mode to set
      */
     public void fetchMode(String associationPath, FetchMode fetchMode) {
+        if (fetchMode.equals(FetchMode.SELECT)){
+            hibernateQuery.detachedCriteria.select(associationPath);
+        } else {
+            hibernateQuery.detachedCriteria.join(associationPath);
+        }
+
     }
 
     /**
@@ -441,6 +444,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @return A Criterion instance
      */
     public Criteria eqProperty(String propertyName, String otherPropertyName) {
+        hibernateQuery.eqProperty(propertyName,otherPropertyName);
         return this;
     }
 
@@ -451,6 +455,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @return A Criterion instance
      */
     public Criteria neProperty(String propertyName, String otherPropertyName) {
+        hibernateQuery.neProperty(propertyName,otherPropertyName);
         return this;
     }
 
@@ -461,6 +466,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @return A Criterion instance
      */
     public Criteria gtProperty(String propertyName, String otherPropertyName) {
+        hibernateQuery.gtProperty(propertyName,otherPropertyName);
         return this;
     }
 
@@ -471,6 +477,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @return A Criterion instance
      */
     public Criteria geProperty(String propertyName, String otherPropertyName) {
+        hibernateQuery.geProperty(propertyName,otherPropertyName);
         return this;
     }
 
@@ -481,6 +488,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @return A Criterion instance
      */
     public Criteria ltProperty(String propertyName, String otherPropertyName) {
+        hibernateQuery.ltProperty(propertyName,otherPropertyName);
         return this;
     }
 
@@ -491,11 +499,13 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @return A Criterion instance
      */
     public Criteria leProperty(String propertyName, String otherPropertyName) {
+        hibernateQuery.leProperty(propertyName,otherPropertyName);
         return this;
     }
 
     @Override
     public Criteria allEq(Map<String, Object> propertyValues) {
+        hibernateQuery.allEq(propertyValues);
         return this;
     }
 
@@ -568,8 +578,8 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @param propertyValue The property value
      * @return A Criterion instance
      */
-    public Criteria eqAll(String propertyName,
-                                                                 @SuppressWarnings("rawtypes") QueryableCriteria propertyValue) {
+    public Criteria eqAll(String propertyName, @SuppressWarnings("rawtypes") QueryableCriteria propertyValue) {
+        hibernateQuery.eqAll(propertyName,propertyValue);
         return this;
     }
 
@@ -580,8 +590,8 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @param propertyValue The property value
      * @return A Criterion instance
      */
-    public Criteria gtAll(String propertyName,
-                                                                 @SuppressWarnings("rawtypes") QueryableCriteria propertyValue) {
+    public Criteria gtAll(String propertyName, @SuppressWarnings("rawtypes") QueryableCriteria propertyValue) {
+        hibernateQuery.gtAll(propertyName,propertyValue);
         return this;
     }
 
@@ -859,7 +869,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @return a Criteria instance
      */
     public Criteria sqlRestriction(String sqlRestriction, List<?> values) {
-        return this;
+       throw new RuntimeException("This feature is not supported in Hibernate 6");
     }
 
     /**
