@@ -43,24 +43,29 @@ class MultipleDataSourceConnectionsSpec extends Specification {
         then:"The default data source is bound"
         result ==1
         Book.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == "jdbc:h2:mem:books"
+            def url = s.doReturningWork { return it.metaData.getURL()  }
+            assert url  == "jdbc:h2:mem:books"
             return true
         }
         Book.moreBooks.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == "jdbc:h2:mem:moreBooks"
+            def url = s.doReturningWork { return it.metaData.getURL()  }
+            assert url   == "jdbc:h2:mem:moreBooks"
             return true
         }
         Author.withNewSession { Author.count() == 1 }
         Author.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == "jdbc:h2:mem:grailsDB"
+            def url = s.doReturningWork { return it.metaData.getURL()  }
+            assert url  == "jdbc:h2:mem:grailsDB"
             return true
         }
         Author.books.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == "jdbc:h2:mem:books"
+            def url = s.doReturningWork { return it.metaData.getURL()  }
+            assert url  == "jdbc:h2:mem:books"
             return true
         }
         Author.moreBooks.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == "jdbc:h2:mem:moreBooks"
+            def url = s.doReturningWork { return it.metaData.getURL()  }
+            assert url == "jdbc:h2:mem:moreBooks"
             return true
         }
 
@@ -89,7 +94,8 @@ class MultipleDataSourceConnectionsSpec extends Specification {
         Author.withTransaction { Author.count() } == 1
         Book.withTransaction { Book.count() } == 1
         Author.yetAnother.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == "jdbc:h2:mem:yetAnotherDB"
+            def url = s.doReturningWork { return it.metaData.getURL()  }
+            assert url  == "jdbc:h2:mem:yetAnotherDB"
             return true
         }
     }

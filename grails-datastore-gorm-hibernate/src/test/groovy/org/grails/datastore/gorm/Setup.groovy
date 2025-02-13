@@ -43,7 +43,9 @@ class Setup {
         if(hibernateConfig != null) {
             hibernateConfig = null
         }
-        hibernateDatastore.destroy()
+        if (hibernateDatastore != null) {
+            hibernateDatastore.destroy()
+        }
         grailsApplication = null
         hibernateDatastore = null
         hibernateSession = null

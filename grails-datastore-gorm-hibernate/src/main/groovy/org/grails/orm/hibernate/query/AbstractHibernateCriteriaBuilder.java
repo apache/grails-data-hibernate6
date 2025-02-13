@@ -122,8 +122,8 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
 
     @SuppressWarnings("rawtypes")
     public AbstractHibernateCriteriaBuilder(Class targetClass, SessionFactory sessionFactory, AbstractHibernateDatastore datastore) {
-        setDatastore(datastore);
         this.targetClass = targetClass;
+        setDatastore(datastore);
         this.sessionFactory = sessionFactory;
         this.cb = sessionFactory.getCriteriaBuilder();
 //        this.criteriaQuery = cb.createQuery(targetClass);

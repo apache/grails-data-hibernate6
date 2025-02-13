@@ -42,7 +42,7 @@ class HibernateGormDatastoreSpec extends Specification{
     Session configure() {
         ConfigObject grailsConfig = new ConfigObject()
         Map config = [
-                'dataSource.url':"jdbc:tc:postgresql:///dev_db",
+                'dataSource.url':"jdbc:tc:postgresql:latest:///dev_db",
                 'dataSource.dbCreate': 'create-drop',
                 'dataSource.formatSql': 'true',
                 'dataSource.logSql': 'true',

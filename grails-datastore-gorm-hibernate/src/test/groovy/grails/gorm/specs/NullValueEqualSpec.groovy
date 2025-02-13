@@ -1,9 +1,15 @@
 package grails.gorm.specs
 
+import grails.gorm.tests.ChildEntity
 import grails.gorm.tests.GormDatastoreSpec
 import grails.gorm.tests.TestEntity
+import org.grails.orm.hibernate.HibernateDatastoreSpec
 
-class NullValueEqualSpec extends GormDatastoreSpec {
+class NullValueEqualSpec extends HibernateGormDatastoreSpec {
+
+    List getDomainClasses() {
+        [TestEntity, ChildEntity]
+    }
 
     void "test null value in equal and not equal"() {
         when:

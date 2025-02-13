@@ -416,7 +416,7 @@ public abstract class AbstractHibernateQuery extends Query {
         try {
             return createQuery().getSingleResult();
         }
-        catch (Throwable e) {
+        catch (jakarta.persistence.NoResultException e) {
            return null;
         }
     }
@@ -506,7 +506,7 @@ public abstract class AbstractHibernateQuery extends Query {
     private void assignCriteria(CriteriaQuery cq, HibernateCriteriaBuilder cb, From root) {
         List<Criterion>  criteriaList = (List<Criterion>)detachedCriteria.getCriteria();
         if (!criteriaList.isEmpty()) {
-            cq.where(cb.and(PredicateGenerator.getPredicates(cb, cq, root, criteriaList)));
+            cq.where(cb.and(PredicateGenerator.getPredicates(cb, cq, root, criteriaList,getSessionFactory().getCurrentSession())));
         }
     }
 

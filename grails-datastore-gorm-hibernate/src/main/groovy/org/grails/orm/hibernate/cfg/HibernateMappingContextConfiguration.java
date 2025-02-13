@@ -288,7 +288,11 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
                                                                                     .applySettings(getProperties());
 
         StandardServiceRegistry serviceRegistry = standardServiceRegistryBuilder.build();
-        sessionFactory = super.buildSessionFactory(serviceRegistry);
+        try {
+            sessionFactory = super.buildSessionFactory(serviceRegistry);
+        } catch (HibernateException e) {
+            throw new RuntimeException(e);
+        }
         this.serviceRegistry = serviceRegistry;
 
         return sessionFactory;

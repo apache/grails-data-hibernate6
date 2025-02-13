@@ -319,9 +319,9 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         oldPet == newPet
     }
 
-    @Ignore("Not sure why this is not passing")
+    @Ignore("Exits subquery is broken")
     /**
-     * @see org.grails.orm.hibernate.query.PredicateGenerator.getPredicates()
+     * org.grails.orm.hibernate.query.PredicateGenerator.getPredicates()
      * else if (criterion instanceof Query.Exists c)
      select
      p1_0.id,
@@ -356,7 +356,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         oldBob == newBob
     }
 
-    @Ignore("Not sure why this is not passing")
+    @Ignore("Exists subquery is broken")
     /**
      * @see org.grails.orm.hibernate.query.PredicateGenerator.getPredicates()
      * else if (criterion instanceof Query.NotExists c)
@@ -715,6 +715,18 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         def newBob = hibernateQuery.singleResult()
         then:
         oldBob == newBob
+    }
+
+    def maxResults() {
+        given:
+        new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
+        hibernateQuery.maxResults(1).order(Query.Order.asc("age"))
+        when:
+        def bobs = hibernateQuery.list()
+        then:
+        bobs.size() == 1
+        bobs[0] == oldBob
+
     }
 
 }

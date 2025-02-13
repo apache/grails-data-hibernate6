@@ -571,7 +571,9 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
         }
 
         return (List<D>) template.execute { Session session ->
-            Query q = (Query) session.createQuery(query.toString(),persistentEntity.javaClass)
+            //TODO Right now making the return type of Object.class to execute arbitrary queries
+            // not sure if this will work for projections
+            Query q = (Query) session.createQuery(query.toString(),Object.class)
             template.applySettings(q)
 
             populateQueryArguments(q, params)
