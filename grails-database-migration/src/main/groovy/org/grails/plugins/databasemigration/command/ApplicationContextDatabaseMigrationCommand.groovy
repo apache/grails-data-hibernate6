@@ -35,7 +35,6 @@ import org.hibernate.engine.jdbc.spi.JdbcServices
 import org.hibernate.engine.spi.SessionFactoryImplementor
 import org.springframework.context.ConfigurableApplicationContext
 
-import static org.grails.plugins.databasemigration.DatabaseMigrationGrailsPlugin.getDataSourceName
 import static org.grails.plugins.databasemigration.DatabaseMigrationGrailsPlugin.isDefaultDataSource
 import static org.grails.plugins.databasemigration.PluginConstants.DEFAULT_DATASOURCE_NAME
 
@@ -78,10 +77,9 @@ trait ApplicationContextDatabaseMigrationCommand implements DatabaseMigrationCom
     }
 
     private Database createGormDatabase(ConfigurableApplicationContext applicationContext, String dataSource) {
-        String dataSourceName = getDataSourceName(dataSource)
         String sessionFactoryName = "sessionFactory"
         if (!isDefaultDataSource(dataSource)) {
-            sessionFactoryName = sessionFactoryName + '_' + dataSourceName
+            sessionFactoryName = sessionFactoryName + '_' + dataSource
         }
 
         def serviceRegistry = applicationContext.getBean(sessionFactoryName, SessionFactoryImplementor).serviceRegistry.parentServiceRegistry
@@ -89,7 +87,7 @@ trait ApplicationContextDatabaseMigrationCommand implements DatabaseMigrationCom
         Dialect dialect = serviceRegistry.getService(JdbcServices.class).dialect
 
         HibernateDatastore hibernateDatastore = applicationContext.getBean("hibernateDatastore", HibernateDatastore)
-        hibernateDatastore = hibernateDatastore.getDatastoreForConnection(dataSourceName)
+        hibernateDatastore = hibernateDatastore.getDatastoreForConnection(dataSource)
 
         Database database = new GormDatabase(dialect, serviceRegistry, hibernateDatastore)
         configureDatabase(database)
