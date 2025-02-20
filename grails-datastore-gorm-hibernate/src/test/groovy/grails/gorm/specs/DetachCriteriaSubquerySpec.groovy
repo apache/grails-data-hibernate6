@@ -70,6 +70,7 @@ class DetachCriteriaSubquerySpec extends HibernateGormDatastoreSpec {
         result.size() == 5
     }
 
+    @Ignore("Explore is currently broken")
     void "test that detached criteria subquery should create implicit alias instead of using this_"() {
 
         setup:

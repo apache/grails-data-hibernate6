@@ -290,7 +290,7 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
         StandardServiceRegistry serviceRegistry = standardServiceRegistryBuilder.build();
         try {
             sessionFactory = super.buildSessionFactory(serviceRegistry);
-        } catch (HibernateException e) {
+        } catch (Throwable e) {
             throw new RuntimeException(e);
         }
         this.serviceRegistry = serviceRegistry;

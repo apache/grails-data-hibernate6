@@ -1,18 +1,12 @@
 package org.grails.orm.hibernate.query;
 
 import groovy.util.logging.Slf4j;
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.From;
-import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
-import jakarta.persistence.metamodel.EntityType;
-import jakarta.persistence.metamodel.PluralAttribute;
-import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.query.Query;
-import org.hibernate.Session;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaInPredicate;
 import org.hibernate.query.sqm.tree.predicate.SqmInListPredicate;
@@ -29,8 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+
 import static org.grails.orm.hibernate.query.AbstractHibernateQuery.getFullyQualifiedPath;
 
 
@@ -46,7 +39,7 @@ public class PredicateGenerator {
 
         List<Predicate> list = criteriaList.stream().
                 map(criterion -> {
-                    if (criterion instanceof Query.Disjunction) {
+                        if (criterion instanceof Query.Disjunction) {
                         List<Query.Criterion> criterionList = ((Query.Disjunction) criterion).getCriteria();
                         return cb.or(getPredicates(cb, criteriaQuery, root_, criterionList, tablesByName));
                     } else if (criterion instanceof Query.Conjunction) {
@@ -141,8 +134,11 @@ public class PredicateGenerator {
                         Subquery subquery = criteriaQuery.subquery(getJavaTypeOfInClause((SqmInListPredicate) in));
                         Root from = subquery.from(c.getSubquery().getPersistentEntity().getJavaClass());
                         List subCriteria = c.getSubquery().getCriteria();
-                        Predicate[] predicates = getSubPredicates(cb, criteriaQuery, tablesByName, from, subCriteria);
-                        subquery.select(from.get(projection.getPropertyName())).distinct(distinct).where(cb.and(predicates));
+                        Map<String,From> newMap = new HashMap<>();
+                        newMap.putAll(tablesByName);
+                        newMap.put("root", from);
+                        Predicate[] predicates = getPredicates(cb, criteriaQuery, from, subCriteria, newMap);
+                        subquery.select(getFullyQualifiedPath(newMap,projection.getPropertyName())).distinct(distinct).where(cb.and(predicates));
                         return in.value(subquery);
                     } else if (criterion instanceof Query.In c
                             && Objects.nonNull(c.getSubquery())
@@ -153,7 +149,10 @@ public class PredicateGenerator {
                         Subquery subquery = criteriaQuery.subquery(getJavaTypeOfInClause((SqmInListPredicate) in));
                         Root from = subquery.from(c.getSubquery().getPersistentEntity().getJavaClass());
                         List subCriteria = c.getSubquery().getCriteria();
-                        Predicate[] predicates = getSubPredicates(cb, criteriaQuery, tablesByName, from, subCriteria);
+                        Map<String,From> newMap = new HashMap<>();
+                        newMap.putAll(tablesByName);
+                        newMap.put("root", from);
+                        Predicate[] predicates = getPredicates(cb, criteriaQuery, from, subCriteria, newMap);
                         subquery.select(from).where(cb.and(predicates));
                         return in.value(subquery);
                     } else if (criterion instanceof Query.In c && !c.getValues().isEmpty()
@@ -175,7 +174,10 @@ public class PredicateGenerator {
                         Subquery subquery = criteriaQuery.subquery(Number.class);
                         Root from = subquery.from(c.getValue().getPersistentEntity().getJavaClass());
                         List subCriteria = c.getValue().getCriteria();
-                        Predicate[] predicates = getSubPredicates(cb, criteriaQuery, tablesByName, from, subCriteria);
+                        Map<String,From> newMap = new HashMap<>();
+                        newMap.putAll(tablesByName);
+                        newMap.put("root", from);
+                        Predicate[] predicates = getPredicates(cb, criteriaQuery, from, subCriteria, newMap);
                         if (c instanceof Query.GreaterThanEqualsAll sc) {
                             subquery.select(cb.max(from.get(c.getProperty()))).where(cb.and(predicates));
                             return cb.greaterThanOrEqualTo(getFullyQualifiedPath(tablesByName, sc.getProperty()), subquery);
@@ -227,18 +229,6 @@ public class PredicateGenerator {
             list = List.of(cb.equal(cb.literal(1),cb.literal(1)));
         }
         return list.toArray(new Predicate[0]);
-    }
-
-    private static Predicate[] getSubPredicates(HibernateCriteriaBuilder cb, CriteriaQuery criteriaQuery, Map<String, From> tablesByName, Root from, List subCriteria) {
-        Predicate[] predicates;
-        if (tablesByName.size() == 1 && tablesByName.containsKey("root")) {
-            Map<String,From> newMap = new HashMap<>();
-            newMap.put("root", from);
-            predicates = getPredicates(cb, criteriaQuery, from, subCriteria, newMap);
-        } else {
-            predicates = getPredicates(cb, criteriaQuery, from, subCriteria, tablesByName);
-        }
-        return predicates;
     }
 
 

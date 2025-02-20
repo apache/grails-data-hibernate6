@@ -1,6 +1,7 @@
 package grails.gorm.specs.validation
 
 import grails.gorm.annotation.Entity
+import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import org.grails.orm.hibernate.GormSpec
 import groovy.transform.EqualsAndHashCode
@@ -17,17 +18,19 @@ import spock.lang.Specification
  * Created by graemerocher on 29/05/2017.
  */
 @Issue('https://github.com/grails/gorm-hibernate5/issues/36')
-class UniqueWithinGroupSpec extends Specification {
+class UniqueWithinGroupSpec extends HibernateGormDatastoreSpec {
 
-    @AutoCleanup @Shared HibernateDatastore hibernateDatastore = new HibernateDatastore(getClass().getPackage())
-    @Shared SessionFactory sessionFactory = hibernateDatastore.sessionFactory
+    @Override
+    List getDomainClasses() {
+        [Thing]
+    }
 
     @Rollback
     void "test insert"() {
         when:
         Thing thing1 = new Thing(hello: 1, world: 2)
         thing1.insert(flush: true)
-        sessionFactory.currentSession.flush()
+
         Thing thing2 = new Thing(hello: 1, world: 2)
         thing2.insert(flush: true)
 

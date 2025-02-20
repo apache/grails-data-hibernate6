@@ -16,6 +16,7 @@
 package grails.gorm.specs.validation
 
 import grails.gorm.annotation.Entity
+import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.SessionFactory
@@ -30,10 +31,11 @@ import spock.lang.Specification
  * @since 1.0
  */
 @Issue('https://github.com/grails/grails-data-mapping/issues/1004')
-class UniqueWithHasOneSpec extends Specification {
+class UniqueWithHasOneSpec extends HibernateGormDatastoreSpec {
 
-    @AutoCleanup @Shared HibernateDatastore hibernateDatastore = new HibernateDatastore(getClass().getPackage())
-    @Shared SessionFactory sessionFactory = hibernateDatastore.sessionFactory
+    List getDomainClasses() {
+        [Foo,Bar]
+    }
 
     @Rollback
     void "test unique constraint with hasOne"() {
