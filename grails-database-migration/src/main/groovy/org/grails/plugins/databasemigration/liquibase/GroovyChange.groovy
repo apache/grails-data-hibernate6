@@ -90,6 +90,9 @@ class GroovyChange extends AbstractChange {
     void load(ParsedNode parsedNode, ResourceAccessor resourceAccessor) throws ParsedNodeException {
         ctx = parsedNode.getChildValue(null, 'applicationContext', ApplicationContext)
         dataSourceName = parsedNode.getChildValue(null, DATA_SOURCE_NAME_KEY, String)
+        if (dataSourceName?.startsWith("dataSource_")) {
+            dataSourceName = dataSourceName.substring("dataSource_".length())
+        }
 
         initClosure = parsedNode.getChildValue(null, 'init', Closure)
         initClosure?.setResolveStrategy(Closure.DELEGATE_FIRST)
