@@ -6,6 +6,7 @@ import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.query.Query;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaInPredicate;
@@ -45,6 +46,9 @@ public class PredicateGenerator {
                     } else if (criterion instanceof Query.Conjunction) {
                         List<Query.Criterion> criterionList = ((Query.Conjunction) criterion).getCriteria();
                         return cb.and(getPredicates(cb, criteriaQuery, root_, criterionList, tablesByName));
+                    } else if (criterion instanceof DetachedAssociationCriteria<?> c) {
+                            List<Query.Criterion> criterionList = c.getCriteria();
+                            return cb.and(getPredicates(cb, criteriaQuery, root_, criterionList, tablesByName));
                     } else if (criterion instanceof Query.Negation) {
                         List<Query.Criterion> criterionList = ((Query.Negation) criterion).getCriteria();
                         Predicate[] predicates = getPredicates(cb, criteriaQuery, root_, criterionList, tablesByName);

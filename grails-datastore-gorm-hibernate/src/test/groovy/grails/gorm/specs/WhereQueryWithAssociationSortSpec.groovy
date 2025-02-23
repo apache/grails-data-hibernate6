@@ -1,13 +1,13 @@
 package grails.gorm.specs
 
 import grails.gorm.tests.GormDatastoreSpec
-import org.hibernate.QueryException
+import org.grails.datastore.mapping.query.QueryException
 import spock.lang.Issue
 
 /**
  * Created by graemerocher on 03/11/16.
  */
-class WhereQueryWithAssociationSortSpec extends GormDatastoreSpec {
+class WhereQueryWithAssociationSortSpec extends HibernateGormDatastoreSpec {
 
     @Issue('https://github.com/grails/grails-core/issues/9860')
     void "Test sort with where query that queries association"() {
@@ -28,10 +28,12 @@ class WhereQueryWithAssociationSortSpec extends GormDatastoreSpec {
 
 
         when:"a where query uses a sort on an association"
-        results = Team.where {
+
+        def where = Team.where {
             def c1 = club
             c1.name ==~ '%e%'
-        }.list(sort:'c1.name')
+        }
+       results = where.list(sort:'c1.name')
 
 
         then:"an exception is thrown because no alias is specified"

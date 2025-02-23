@@ -30,6 +30,7 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Query;
+import org.grails.datastore.mapping.query.QueryException;
 import org.grails.datastore.mapping.query.Restrictions;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.orm.hibernate.AbstractHibernateSession;
@@ -48,6 +49,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -184,6 +186,9 @@ public abstract class AbstractHibernateQuery extends Query {
             le(c.getProperty(),c.getValue());
         } else if (criterion instanceof LessThan c) {
             lt(c.getProperty(),c.getValue());
+        } else {
+            //TODO It could be that this is the only call needed!
+            detachedCriteria.add(criterion);
         }
     }
 
@@ -448,12 +453,14 @@ public abstract class AbstractHibernateQuery extends Query {
 
     protected org.hibernate.query.Query createQuery() {
         HibernateCriteriaBuilder cb = getCriteriaBuilder();
+
+
         List<DetachedAssociationCriteria> detachedAssociationCriteria = getDetachedAssociationCriteria();
 
         Map<String, DetachedAssociationCriteria> aliasMap = detachedAssociationCriteria.stream()
                 .collect(Collectors.toMap(
                         DetachedAssociationCriteria::getAssociationPath,
-                    criteria ->criteria)
+                    criteria ->criteria, (oldValue,newValue) -> newValue)
                 );
 
 
@@ -469,7 +476,7 @@ public abstract class AbstractHibernateQuery extends Query {
         Map<String, From> fromMap = detachedAssociationCriteria.stream()
                 .collect(Collectors.toMap(
                         DetachedAssociationCriteria::getAssociationPath,
-                        criteria -> cq.from(criteria.getAssociation().getOwner().getJavaClass()))
+                        criteria -> cq.from(criteria.getAssociation().getOwner().getJavaClass()) , (oldValue,newValue) -> newValue)
                 );
         fromMap.put("root", root);
         Map<String, From> tablesByName = assignJoinTables(joinColumns, root,aliasMap, fromMap);
@@ -627,7 +634,7 @@ public abstract class AbstractHibernateQuery extends Query {
     private static String aliasColumn(Map<String, DetachedAssociationCriteria> aliasMap, String associationPath, Join table) {
         String column = associationPath;
         if (aliasMap.containsKey(associationPath)) {
-            column = aliasMap.get(associationPath).getAlias();
+            column = Optional.ofNullable(aliasMap.get(associationPath).getAlias()).orElseThrow(() -> new QueryException("Association without alias"));
             table.alias(column);
         }
         return column;

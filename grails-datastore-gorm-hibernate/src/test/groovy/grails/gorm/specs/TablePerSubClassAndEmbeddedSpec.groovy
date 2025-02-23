@@ -16,10 +16,13 @@ import spock.lang.Specification
  * Created by graemerocher on 04/11/16.
  */
 @ApplyDetachedCriteriaTransform
-class TablePerSubClassAndEmbeddedSpec extends Specification {
+class TablePerSubClassAndEmbeddedSpec extends HibernateGormDatastoreSpec {
 
-    @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(Company, Vendor)
-    @Shared PlatformTransactionManager transactionManager = hibernateDatastore.getTransactionManager()
+    @Override
+    List getDomainClasses() {
+        [Company, Vendor]
+    }
+
 
     @Rollback
     void 'test table per subclass with embedded entity'() {
