@@ -23,7 +23,7 @@ ext {
     nexusUsername = System.getenv("SONATYPE_USERNAME") ?: project.hasProperty("sonatypeOssUsername") ? project.sonatypeOssUsername : ''
     nexusPassword = System.getenv("SONATYPE_PASSWORD") ?: project.hasProperty("sonatypeOssPassword") ? project.sonatypeOssPassword : ''
     isSnapshot = project.projectVersion.endsWith("-SNAPSHOT")
-    groovyVersion = System.getenv('CI_GROOVY_VERSION') ?: project.groovyVersion
+    groovyVersion = System.getenv('CI_GROOVY_VERSION')
 }
 
 ext."signing.keyId" = System.getenv("SIGNING_KEY") ?: project.hasProperty("signing.keyId") ? project.getProperty('signing.keyId') : null
@@ -51,7 +51,7 @@ if (isReleaseVersion) {
 
 allprojects {
 
-    ext.groovyVersion = System.getenv('CI_GROOVY_VERSION') ?: project.groovyVersion
+    ext.groovyVersion = System.getenv('CI_GROOVY_VERSION')
 
     repositories {
         mavenCentral()
