@@ -1,10 +1,16 @@
-To use GORM {pluginVersion} for Hibernate in Grails 3 you can specify the following configuration in `build.gradle`:
+To use GORM {pluginVersion} for Hibernate in Grails 7 you can specify the following configuration in `build.gradle`:
 
 [source,groovy,subs="attributes"]
 ----
 dependencies {
-    compile "org.grails.plugins:hibernate5:{pluginVersion}"
-    compile "org.hibernate:hibernate-ehcache"
+    implementation "org.grails.plugins:hibernate5:{pluginVersion}"
+    runtimeOnly 'org.hibernate:hibernate-ehcache:5.6.15.Final', {
+    // exclude javax variant of hibernate-core
+    exclude group: 'org.hibernate', module: 'hibernate-core'
+    }
+    runtimeOnly 'org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:2.0.0.Final', {
+      // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
+    }
 }
 ----
 

@@ -1,5 +1,25 @@
 There are various changes you have to make to your build depending on the version of Grails when using GORM {version}.
 
+==== Grails 7.0.0 and above with Hibernate 5.6.x
+
+Grails 7.0.x is based on Spring Boot 3.4.x which enforces Hibernate 5.6.x as the default version.
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    implementation "org.grails.plugins:hibernate5:{pluginVersion}"
+    runtimeOnly 'org.hibernate:hibernate-ehcache:5.6.15.Final', {
+    // exclude javax variant of hibernate-core
+    exclude group: 'org.hibernate', module: 'hibernate-core'
+    }
+    runtimeOnly 'org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:2.0.0.Final', {
+      // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
+    }
+}
+----
+
+
 ==== Grails 3.2.x and above with Hibernate 4
 
 Grails 3.2.x is based on Spring Boot 1.4.x which enforces Hibernate 5.0.x as the default version. If you want to continue to use Hibernate 4 you must explicitly declare the Hibernate 4 dependences in `build.gradle`.

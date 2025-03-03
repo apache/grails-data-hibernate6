@@ -38,6 +38,8 @@ dependencies {
 }
 
 asciidoctor {
+    inputs.dir layout.projectDirectory.dir('src/docs/asciidoc')
+    outputs.dir layout.buildDirectory.dir('docs/manual')
     baseDirFollowsSourceDir()
     resources {
         from("${project.projectDir}/src/docs/asciidoc/images")
@@ -51,7 +53,13 @@ asciidoctor {
                 'reproducible'  : '',
                 'version'       : project.version,
                 'pluginVersion' : project.version,
-                'sourcedir'     : "${project.projectDir}/src/main/groovy"
+                'groupId'       : project.group,
+                'artifactId'    : project.name,
+                'sourcedir'     : "${project.projectDir}/src/main/groovy",
+                'migrationPluginExamplesDir' : rootProject.layout.projectDirectory.dir('grails-database-migration/src/integration-test/resources').asFile.absolutePath,
+                'migrationPluginGroupId' : rootProject.findProject(':database-migration').group,
+                'migrationPluginArtifactId' : rootProject.findProject(':database-migration').name,
+                'liquibaseHibernate5Version': liquibaseHibernate5Version
 }
 
 task fetchSource {

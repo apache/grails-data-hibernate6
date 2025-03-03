@@ -4,9 +4,10 @@ buildscript {
         maven { url "https://plugins.gradle.org/m2/" }
     }
     dependencies {
+        classpath platform("org.grails:grails-bom:$grailsVersion")
         classpath "io.github.gradle-nexus:publish-plugin:$gradleNexusPublishPluginVersion"
-        classpath "org.grails:grails-gradle-plugin:$grailsGradlePluginVersion"
-        classpath "org.grails.plugins:views-gradle:$viewsGradleVersion"
+        classpath "org.grails:grails-gradle-plugin"
+        classpath "org.grails.plugins:views-gradle"
         classpath "org.asciidoctor:asciidoctor-gradle-jvm:$asciidoctorGradleVersion"
     }
 }
@@ -23,7 +24,7 @@ ext {
     nexusUsername = System.getenv("SONATYPE_USERNAME") ?: project.hasProperty("sonatypeOssUsername") ? project.sonatypeOssUsername : ''
     nexusPassword = System.getenv("SONATYPE_PASSWORD") ?: project.hasProperty("sonatypeOssPassword") ? project.sonatypeOssPassword : ''
     isSnapshot = project.projectVersion.endsWith("-SNAPSHOT")
-    groovyVersion = System.getenv('CI_GROOVY_VERSION') ?: project.groovyVersion
+    groovyVersion = System.getenv('CI_GROOVY_VERSION')
 }
 
 ext."signing.keyId" = System.getenv("SIGNING_KEY") ?: project.hasProperty("signing.keyId") ? project.getProperty('signing.keyId') : null
@@ -51,7 +52,7 @@ if (isReleaseVersion) {
 
 allprojects {
 
-    ext.groovyVersion = System.getenv('CI_GROOVY_VERSION') ?: project.groovyVersion
+    ext.groovyVersion = System.getenv('CI_GROOVY_VERSION')
 
     repositories {
         mavenCentral()
