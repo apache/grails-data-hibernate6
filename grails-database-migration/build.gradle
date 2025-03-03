@@ -3,7 +3,8 @@ buildscript {
         maven { url "https://repo.grails.org/grails/core" }
     }
     dependencies {
-        classpath "org.grails:grails-gradle-plugin:$grailsGradlePluginVersion"
+        classpath platform("org.grails:grails-bom:$grailsVersion")
+        classpath "org.grails:grails-gradle-plugin"
         classpath "org.asciidoctor:asciidoctor-gradle-jvm:$asciidoctorGradleVersion"
     }
 }

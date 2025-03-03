@@ -4,9 +4,10 @@ buildscript {
         maven { url "https://plugins.gradle.org/m2/" }
     }
     dependencies {
+        classpath platform("org.grails:grails-bom:$grailsVersion")
         classpath "io.github.gradle-nexus:publish-plugin:$gradleNexusPublishPluginVersion"
-        classpath "org.grails:grails-gradle-plugin:$grailsGradlePluginVersion"
-        classpath "org.grails.plugins:views-gradle:$viewsGradleVersion"
+        classpath "org.grails:grails-gradle-plugin"
+        classpath "org.grails.plugins:views-gradle"
         classpath "org.asciidoctor:asciidoctor-gradle-jvm:$asciidoctorGradleVersion"
     }
 }
