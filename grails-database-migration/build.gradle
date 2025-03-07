@@ -58,7 +58,7 @@ tasks.withType(Test).configureEach {
             maxFailures = 20
             failOnPassedAfterRetry = true
             filter {
-                excludeTestsMatching '*.GroovyChangeLogSpec'
+                excludeClasses.add('*.GroovyChangeLogSpec')
             }
         }
     }
