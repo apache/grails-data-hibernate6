@@ -12,15 +12,13 @@ import spock.lang.Specification
  * Created by graemerocher on 01/03/2017.
  */
 @ApplyDetachedCriteriaTransform
-class SubqueryAliasSpec extends Specification {
+class SubqueryAliasSpec extends HibernateGormDatastoreSpec {
 
-    @AutoCleanup @Shared HibernateDatastore datastore = new HibernateDatastore(
-        Club, Team
-    )
+    List getDomainClasses() {
+        [Club,Team]
+    }
 
-    @Shared PlatformTransactionManager transactionManager = datastore.getTransactionManager()
 
-    @Rollback
     void "Test subquery with root alias"() {
         given:
         Club c = new Club(name: "Manchester United").save()

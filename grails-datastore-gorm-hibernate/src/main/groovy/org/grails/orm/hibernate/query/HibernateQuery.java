@@ -19,6 +19,7 @@ package org.grails.orm.hibernate.query;
 
 import grails.gorm.DetachedCriteria;
 import groovy.lang.Closure;
+import org.grails.datastore.mapping.query.Projections;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.Restrictions;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
@@ -214,9 +215,19 @@ public class HibernateQuery extends AbstractHibernateQuery {
         return this;
     }
 
+    public Query maxResults(int maxResults) {
+        this.max = maxResults;
+        return this;
+    }
+
 
     public Object scroll() {
         return createQuery().scroll();
+    }
+
+    public Query distinct() {
+        projections.add(Projections.distinct());
+        return this;
     }
 
 

@@ -43,6 +43,9 @@ public class PredicateGenerator {
                         if (criterion instanceof Query.Disjunction) {
                         List<Query.Criterion> criterionList = ((Query.Disjunction) criterion).getCriteria();
                         return cb.or(getPredicates(cb, criteriaQuery, root_, criterionList, tablesByName));
+                    } else if (criterion instanceof Query.DistinctProjection) {
+                            // this returns always true
+                        return cb.conjunction();
                     } else if (criterion instanceof Query.Conjunction) {
                         List<Query.Criterion> criterionList = ((Query.Conjunction) criterion).getCriteria();
                         return cb.and(getPredicates(cb, criteriaQuery, root_, criterionList, tablesByName));
