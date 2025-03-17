@@ -1,11 +1,10 @@
 plugins {
-    id 'com.bertramlabs.asset-pipeline' version '5.0.1'
-    id 'groovy'
-    id 'org.grails.grails-gsp'
     id 'org.grails.grails-web'
+    id 'org.grails.grails-gsp'
+    id 'com.bertramlabs.asset-pipeline'
 }
 
-version = rootProject.version
+version = projectVersion
 group = 'examples'
 
 dependencies {
@@ -26,6 +25,13 @@ dependencies {
     runtimeOnly 'org.grails:grails-plugin-services'
     runtimeOnly 'org.grails:grails-plugin-url-mappings'
     runtimeOnly 'org.grails.plugins:fields'
+    runtimeOnly "org.hibernate:hibernate-ehcache:$hibernate6Version", {
+        // exclude javax variant of hibernate-core 5.6
+        exclude group: 'org.hibernate', module: 'hibernate-core'
+    }
+    runtimeOnly "org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:$jbossTransactionApiVersion", {
+        // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
+    }
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
@@ -34,4 +40,10 @@ dependencies {
     testImplementation 'org.grails:grails-web-testing-support'
 
     integrationTestImplementation testFixtures('org.grails.plugins:geb')
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/example-config.gradle')
 }

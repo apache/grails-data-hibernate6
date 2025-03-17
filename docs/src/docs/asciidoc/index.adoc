@@ -10,7 +10,7 @@ Graeme Rocher, Puneet Behl
 [[introduction]]
 == Introduction
 
-include::{includedir}/introduction.adoc[]
+include::introduction.adoc[]
 
 [[releaseHistory]]
 === Release History
@@ -274,3 +274,8 @@ include::constraints/index.adoc[]
 == GORM and Testing
 
 include::testing/index.adoc[]
+
+[[databaseMigration]]
+== Database Migration Plugin
+
+include::databaseMigration/index.adoc[]

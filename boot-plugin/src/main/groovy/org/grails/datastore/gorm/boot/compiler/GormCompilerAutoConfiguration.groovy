@@ -40,7 +40,7 @@ class GormCompilerAutoConfiguration extends CompilerAutoConfiguration{
     @Override
     void applyDependencies(DependencyCustomizer dependencies) throws CompilationFailedException {
         dependencies.ifAnyMissingClasses("grails.persistence.Entity", "grails.gorm.annotation.Entity")
-                        .add("grails-datastore-gorm-hibernate5")
+                        .add("grails-datastore-gorm-hibernate6")
     }
 
     @Override
