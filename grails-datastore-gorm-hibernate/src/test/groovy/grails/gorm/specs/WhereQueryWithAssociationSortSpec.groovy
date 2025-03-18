@@ -1,6 +1,6 @@
 package grails.gorm.specs
 
-import grails.gorm.tests.GormDatastoreSpec
+
 import org.grails.datastore.mapping.query.QueryException
 import spock.lang.Issue
 

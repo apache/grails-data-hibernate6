@@ -3,16 +3,9 @@ package grails.gorm.specs.validation
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
-import org.grails.orm.hibernate.GormSpec
 import groovy.transform.EqualsAndHashCode
-import org.grails.orm.hibernate.HibernateDatastore
-import org.hibernate.SessionFactory
 import org.springframework.dao.DuplicateKeyException
-import spock.lang.AutoCleanup
-import spock.lang.Ignore
 import spock.lang.Issue
-import spock.lang.Shared
-import spock.lang.Specification
 
 /**
  * Created by graemerocher on 29/05/2017.

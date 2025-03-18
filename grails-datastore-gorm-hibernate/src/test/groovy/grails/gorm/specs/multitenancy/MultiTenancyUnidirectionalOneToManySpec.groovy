@@ -1,15 +1,12 @@
 package grails.gorm.specs.multitenancy
 
+import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
-import org.grails.orm.hibernate.GormSpec
-import grails.gorm.MultiTenant
 import org.grails.orm.hibernate.HibernateDatastore
-import org.grails.orm.hibernate.connections.SingleTenantAuthor
 import org.hibernate.dialect.H2Dialect
-import spock.lang.Ignore
 import spock.lang.Issue
 import spock.lang.Specification
 

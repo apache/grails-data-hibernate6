@@ -9,14 +9,8 @@ import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.Session
 import org.hibernate.dialect.H2Dialect
 import org.hibernate.resource.jdbc.spi.JdbcSessionOwner
-import org.springframework.orm.hibernate5.SessionHolder
-import org.springframework.transaction.support.TransactionSynchronizationManager
-import spock.lang.AutoCleanup
 import spock.lang.Ignore
-import spock.lang.Shared
 import spock.lang.Specification
-
-import java.sql.Connection
 
 /**
  * Created by graemerocher on 20/07/2016.

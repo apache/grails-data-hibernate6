@@ -2,12 +2,12 @@ package org.grails.orm.hibernate.connections
 
 import grails.gorm.DetachedCriteria
 import grails.gorm.MultiTenant
+import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.mapping.MappingBuilder
 import grails.gorm.multitenancy.CurrentTenant
 import grails.gorm.multitenancy.Tenant
 import grails.gorm.multitenancy.Tenants
 import grails.gorm.transactions.Rollback
-import grails.gorm.annotation.Entity
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver

@@ -19,9 +19,7 @@ import grails.gorm.specs.services.Attribute
 import grails.gorm.specs.services.Product
 import grails.gorm.transactions.ReadOnly
 import grails.gorm.transactions.Transactional
-import org.grails.orm.hibernate.GormSpec
 import org.grails.orm.hibernate.HibernateDatastore
-import org.springframework.transaction.interceptor.TransactionAspectSupport
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification

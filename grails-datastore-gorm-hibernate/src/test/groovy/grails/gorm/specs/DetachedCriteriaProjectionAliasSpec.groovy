@@ -3,14 +3,8 @@ package grails.gorm.specs
 import grails.gorm.DetachedCriteria
 import grails.gorm.transactions.Rollback
 import grails.gorm.transactions.Transactional
-import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.SessionFactory
-import org.springframework.transaction.PlatformTransactionManager
-import spock.lang.AutoCleanup
 import spock.lang.Issue
-import spock.lang.Shared
-import spock.lang.Specification
-
 
 class DetachedCriteriaProjectionAliasSpec extends HibernateGormDatastoreSpec {
 

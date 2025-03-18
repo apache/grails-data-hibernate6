@@ -2,6 +2,12 @@ package grails.gorm.specs.jpa
 
 import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.transactions.Rollback
+import jakarta.persistence.Entity
+import jakarta.persistence.GeneratedValue
+import jakarta.persistence.Id
+import jakarta.persistence.OneToMany
+import jakarta.validation.ConstraintViolationException
+import jakarta.validation.constraints.Digits
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.orm.hibernate.HibernateDatastore
@@ -9,13 +15,6 @@ import org.springframework.transaction.PlatformTransactionManager
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
-
-import jakarta.persistence.Entity
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.Id
-import jakarta.persistence.OneToMany
-import jakarta.validation.ConstraintViolationException
-import jakarta.validation.constraints.Digits
 
 /**
  * Created by graemerocher on 22/12/16.

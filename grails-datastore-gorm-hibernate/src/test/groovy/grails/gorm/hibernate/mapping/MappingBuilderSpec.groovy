@@ -6,9 +6,8 @@ import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import spock.lang.Specification
 
-import jakarta.persistence.FetchType
-
 import static grails.gorm.hibernate.mapping.MappingBuilder.define
+
 /**
  * Created by graemerocher on 01/02/2017.
  */

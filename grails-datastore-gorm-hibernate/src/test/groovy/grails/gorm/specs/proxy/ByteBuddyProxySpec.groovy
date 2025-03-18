@@ -1,11 +1,9 @@
 package grails.gorm.specs.proxy
 
-import org.grails.datastore.mapping.reflect.ClassUtils
-
 import grails.gorm.specs.Club
-import grails.gorm.tests.GormDatastoreSpec
 import grails.gorm.specs.Team
-import spock.lang.PendingFeature
+import grails.gorm.tests.GormDatastoreSpec
+import org.grails.datastore.mapping.reflect.ClassUtils
 import spock.lang.PendingFeatureIf
 
 /**

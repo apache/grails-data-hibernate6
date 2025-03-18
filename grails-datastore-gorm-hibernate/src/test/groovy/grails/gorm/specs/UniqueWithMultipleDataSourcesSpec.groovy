@@ -7,11 +7,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.dialect.H2Dialect
 import org.springframework.transaction.PlatformTransactionManager
-import spock.lang.AutoCleanup
-import spock.lang.Ignore
-import spock.lang.Issue
-import spock.lang.Shared
-import spock.lang.Specification
+import spock.lang.*
 
 /**
  * Created by graemerocher on 17/02/2017.

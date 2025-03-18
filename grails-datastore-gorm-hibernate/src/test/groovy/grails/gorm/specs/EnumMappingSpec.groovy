@@ -4,8 +4,6 @@ import grails.gorm.annotation.Entity
 import org.grails.orm.hibernate.GormSpec
 import org.hibernate.engine.spi.SessionImplementor
 
-import java.sql.ResultSet
-
 /**
  * Created by graemerocher on 24/02/16.
  */

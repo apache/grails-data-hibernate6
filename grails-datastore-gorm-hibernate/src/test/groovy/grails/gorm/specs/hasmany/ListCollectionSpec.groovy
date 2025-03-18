@@ -2,11 +2,9 @@ package grails.gorm.specs.hasmany
 
 import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
-import org.grails.datastore.mapping.collection.PersistentCollection
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.orm.hibernate.HibernateDatastore
 import spock.lang.AutoCleanup
-import spock.lang.Ignore
 import spock.lang.Shared
 import spock.lang.Specification
 

@@ -3,9 +3,7 @@ package grails.gorm.specs
 import grails.gorm.transactions.Rollback
 import groovy.transform.Generated
 import org.grails.orm.hibernate.HibernateDatastore
-import org.springframework.transaction.PlatformTransactionManager
 import spock.lang.AutoCleanup
-import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Specification
 

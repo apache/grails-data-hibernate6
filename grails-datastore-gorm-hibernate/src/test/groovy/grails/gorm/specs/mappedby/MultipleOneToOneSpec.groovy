@@ -3,7 +3,6 @@ package grails.gorm.specs.mappedby
 import grails.gorm.annotation.Entity
 import org.grails.orm.hibernate.GormSpec
 import spock.lang.Issue
-import spock.lang.Specification
 
 /**
  * Created by graemerocher on 29/05/2017.

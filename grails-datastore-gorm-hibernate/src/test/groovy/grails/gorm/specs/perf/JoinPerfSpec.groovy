@@ -4,13 +4,12 @@ import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
 import groovy.sql.Sql
 import groovy.transform.EqualsAndHashCode
+import jakarta.persistence.AccessType
 import org.grails.orm.hibernate.HibernateDatastore
 import org.springframework.transaction.PlatformTransactionManager
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
-
-import jakarta.persistence.AccessType
 
 /**
  * Created by graemerocher on 08/12/16.

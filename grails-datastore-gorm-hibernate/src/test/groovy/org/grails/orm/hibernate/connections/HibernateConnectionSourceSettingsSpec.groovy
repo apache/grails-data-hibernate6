@@ -1,8 +1,6 @@
 package org.grails.orm.hibernate.connections
 
 import org.grails.datastore.mapping.core.DatastoreUtils
-import org.hibernate.dialect.OracleDialect
-import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.UrlResource
 import spock.lang.Specification
 

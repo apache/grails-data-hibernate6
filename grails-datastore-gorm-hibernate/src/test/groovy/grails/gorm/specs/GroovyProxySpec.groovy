@@ -3,7 +3,6 @@ package grails.gorm.specs
 import grails.gorm.tests.GormDatastoreSpec
 import grails.gorm.tests.Location
 import org.grails.datastore.gorm.proxy.GroovyProxyFactory
-
 import spock.lang.Ignore
 
 /**

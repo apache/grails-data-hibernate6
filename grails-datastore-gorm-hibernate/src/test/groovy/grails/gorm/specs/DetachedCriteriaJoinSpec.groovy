@@ -1,13 +1,9 @@
 package grails.gorm.specs
 
 import grails.gorm.DetachedCriteria
-import org.grails.datastore.gorm.finders.DynamicFinder
-import org.grails.orm.hibernate.AbstractHibernateSession
-import org.grails.orm.hibernate.GormSpec
-import org.grails.orm.hibernate.HibernateDatastore
-import org.grails.orm.hibernate.query.HibernateQuery
-
 import jakarta.persistence.criteria.JoinType
+import org.grails.datastore.gorm.finders.DynamicFinder
+import org.grails.orm.hibernate.query.HibernateQuery
 
 class DetachedCriteriaJoinSpec  extends HibernateGormDatastoreSpec {
 

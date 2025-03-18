@@ -1,7 +1,7 @@
 package org.grails.orm.hibernate.connections
 
-import grails.gorm.services.Service
 import grails.gorm.annotation.Entity
+import grails.gorm.services.Service
 import grails.gorm.transactions.Transactional
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore

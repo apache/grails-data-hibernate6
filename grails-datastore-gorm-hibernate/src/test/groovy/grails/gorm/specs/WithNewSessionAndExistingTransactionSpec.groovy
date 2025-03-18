@@ -6,7 +6,6 @@ import org.grails.orm.hibernate.GormSpec
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.Session
 import org.springframework.orm.hibernate5.SessionHolder
-import org.springframework.orm.hibernate5.SpringSessionSynchronization
 import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import spock.lang.Issue

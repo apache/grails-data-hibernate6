@@ -3,19 +3,12 @@ package grails.gorm.specs.compositeid
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
-import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.PropertyConfig
-import org.hibernate.dialect.H2Dialect
 import org.jetbrains.annotations.NotNull
-import org.springframework.transaction.PlatformTransactionManager
-import spock.lang.AutoCleanup
 import spock.lang.Ignore
 import spock.lang.Issue
-import spock.lang.Shared
-import spock.lang.Specification
 
 /**
  * Created by graemerocher on 17/02/2017.

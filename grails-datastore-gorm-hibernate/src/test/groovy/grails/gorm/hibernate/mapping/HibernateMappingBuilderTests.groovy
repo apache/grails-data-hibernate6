@@ -2,20 +2,16 @@ package grails.gorm.hibernate.mapping
 
 import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.cfg.HibernateMappingBuilder
+import org.grails.orm.hibernate.cfg.PropertyConfig
 
 /**
  * Created by graemerocher on 01/02/2017.
  */
 
-import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.hibernate.FetchMode
 import org.junit.jupiter.api.Test
 
-import static org.junit.jupiter.api.Assertions.assertEquals
-import static org.junit.jupiter.api.Assertions.assertFalse
-import static org.junit.jupiter.api.Assertions.assertNull
-import static org.junit.jupiter.api.Assertions.assertThrows
-import static org.junit.jupiter.api.Assertions.assertTrue
+import static org.junit.jupiter.api.Assertions.*
 
 /**
  * Tests that the Hibernate mapping DSL constructs a valid Mapping object.

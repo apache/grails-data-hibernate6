@@ -6,12 +6,7 @@ import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.transactions.Rollback
 import grails.gorm.transactions.Transactional
 import org.grails.datastore.mapping.query.Query
-import org.grails.orm.hibernate.HibernateDatastore
-import org.springframework.transaction.PlatformTransactionManager
-import spock.lang.AutoCleanup
 import spock.lang.Issue
-import spock.lang.Shared
-import spock.lang.Specification
 
 /**
  * Created by graemerocher on 24/10/16.

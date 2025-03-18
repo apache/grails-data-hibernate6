@@ -4,15 +4,9 @@ import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.mapping.MappingBuilder
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
-import org.grails.orm.hibernate.HibernateDatastore
-import org.hibernate.SessionFactory
 import org.jetbrains.annotations.NotNull
-import org.springframework.transaction.PlatformTransactionManager
-import spock.lang.AutoCleanup
 import spock.lang.Ignore
 import spock.lang.Issue
-import spock.lang.Shared
-import spock.lang.Specification
 
 /**
  * Created by graemerocher on 26/01/2017.
