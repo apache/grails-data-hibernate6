@@ -1,4 +1,4 @@
-package grails.gorm.specs
+package grails.gorm.specs.entities
 
 import grails.gorm.annotation.Entity
 
@@ -8,5 +8,5 @@ import grails.gorm.annotation.Entity
 @Entity
 class Contract {
     BigDecimal salary
-    static belongsTo = [player:Player]
+    static belongsTo = [player: Player]
 }

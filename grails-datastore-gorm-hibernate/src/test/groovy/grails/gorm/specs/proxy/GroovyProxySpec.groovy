@@ -1,4 +1,4 @@
-package grails.gorm.specs
+package grails.gorm.specs.proxy
 
 import grails.gorm.tests.GormDatastoreSpec
 import grails.gorm.tests.Location

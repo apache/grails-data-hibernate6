@@ -7,6 +7,7 @@ import grails.gorm.hibernate.mapping.MappingBuilder
 import grails.gorm.multitenancy.CurrentTenant
 import grails.gorm.multitenancy.Tenant
 import grails.gorm.multitenancy.Tenants
+import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.mapping.core.DatastoreUtils
@@ -14,8 +15,8 @@ import org.grails.datastore.mapping.multitenancy.AllTenantsResolver
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
+import org.grails.datastore.mapping.core.Session
 import org.grails.orm.hibernate.HibernateDatastore
-import org.hibernate.Session
 import org.hibernate.dialect.H2Dialect
 import spock.lang.AutoCleanup
 import spock.lang.Ignore
@@ -25,35 +26,40 @@ import spock.lang.Specification
 /**
  * Created by graemerocher on 11/07/2016.
  */
-@Rollback
-@Ignore
-class PartitionedMultiTenancySpec extends Specification {
 
-    @Shared @AutoCleanup HibernateDatastore datastore
-    void setupSpec() {
+class PartitionedMultiTenancySpec extends HibernateGormDatastoreSpec {
+
+    @Override
+    List getDomainClasses() {
+        [MultiTenantAuthor, MultiTenantBook, MultiTenantPublisher]
+    }
+
+    Session configure() {
+        ConfigObject grailsConfig = new ConfigObject()
         Map config = [
-                "grails.gorm.multiTenancy.mode":MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
-                "grails.gorm.multiTenancy.tenantResolverClass":MyTenantResolver,
-                'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
-                'dataSource.dbCreate': 'update',
-                'dataSource.dialect': H2Dialect.name,
+                'dataSource.url':"jdbc:tc:postgresql:latest:///dev_db",
+                'dataSource.dbCreate': 'create-drop',
                 'dataSource.formatSql': 'true',
                 'dataSource.logSql': 'true',
                 'hibernate.flush.mode': 'COMMIT',
                 'hibernate.cache.queries': 'true',
                 'hibernate.hbm2ddl.auto': 'create',
+                'hibernate.type.descriptor.sql': 'true',
+                "grails.gorm.multiTenancy.mode":MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
+                "grails.gorm.multiTenancy.tenantResolverClass":MyTenantResolver,
         ]
-
-        datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), MultiTenantAuthor, MultiTenantBook, MultiTenantPublisher )
+        grailsConfig.putAll(config)
+        setupClass.setup(((TEST_CLASSES + getDomainClasses()) as Set) as List, grailsConfig, true)
     }
+
 
     Session getSession() { datastore.sessionFactory.currentSession }
 
-    void setup() {
+    def setup() {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
     }
 
-    void cleanup() {
+    def cleanup() {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
     }
 
@@ -75,7 +81,7 @@ class PartitionedMultiTenancySpec extends Specification {
         thrown(TenantNotFoundException)
 
         when:"A tenant id is present"
-        datastore.sessionFactory.currentSession.clear()
+        setupClass.hibernateDatastore.sessionFactory.currentSession.clear()
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "moreBooks")
 
         then:"the correct tenant is used"

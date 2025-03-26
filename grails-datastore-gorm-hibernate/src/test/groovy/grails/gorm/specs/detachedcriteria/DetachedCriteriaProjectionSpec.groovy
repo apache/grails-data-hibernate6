@@ -1,8 +1,9 @@
-package grails.gorm.specs
+package grails.gorm.specs.detachedcriteria
 
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
+import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import grails.gorm.transactions.Transactional
 import org.grails.datastore.mapping.query.Query

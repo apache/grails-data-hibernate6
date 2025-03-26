@@ -36,6 +36,7 @@ import org.hibernate.boot.registry.classloading.spi.ClassLoaderService;
 import org.hibernate.boot.spi.*;
 import org.hibernate.cfg.*;
 import org.hibernate.engine.OptimisticLockStyle;
+import org.hibernate.engine.spi.FilterDefinition;
 import org.hibernate.engine.spi.PersistentAttributeInterceptable;
 import org.hibernate.id.PersistentIdentifierGenerator;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
@@ -45,6 +46,7 @@ import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.OneToMany;
 import org.hibernate.mapping.OneToOne;
 import org.hibernate.mapping.Table;
+import org.hibernate.metamodel.mapping.JdbcMapping;
 import org.hibernate.persister.entity.UnionSubclassEntityPersister;
 import org.hibernate.type.*;
 import org.hibernate.usertype.UserCollectionType;
@@ -1429,30 +1431,31 @@ public class GrailsDomainBinder implements MetadataContributor {
             InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
 
         if (entity.isMultiTenant()) {
-            throw new RuntimeException("Multitenant not supported yet");
-//            TenantId tenantId = entity.getTenantId();
-//
-//            if (tenantId != null) {
-//                String filterCondition = getMultiTenantFilterCondition(sessionFactoryBeanName, entity);
-//
-//                persistentClass.addFilter(
-//                        GormProperties.TENANT_IDENTITY,
-//                        filterCondition,
-//                        true,
-//                        Collections.emptyMap(),
-//                        Collections.emptyMap()
-//                );
-//
-//                Property property = getProperty(persistentClass, tenantId.getName());
-//                Type type = property.getType();
-//                Map<String, Type> stringVMap = Collections.singletonMap(GormProperties.TENANT_IDENTITY, type);
-//                FilterDefinition definition = new FilterDefinition(
-//                        GormProperties.TENANT_IDENTITY,
-//                        filterCondition,
-//                        stringVMap
-//                );
-//                mappings.addFilterDefinition(definition);
-//            }
+            TenantId tenantId = entity.getTenantId();
+
+            if (tenantId != null) {
+                String filterCondition = getMultiTenantFilterCondition(sessionFactoryBeanName, entity);
+
+                persistentClass.addFilter(
+                        GormProperties.TENANT_IDENTITY,
+                        filterCondition,
+                        true,
+                        Collections.emptyMap(),
+                        Collections.emptyMap()
+                );
+
+                Property property = getProperty(persistentClass, tenantId.getName());
+                if (property.getValue() instanceof BasicValue basicValue) {
+                    JdbcMapping jdbcMapping = basicValue.resolve().getJdbcMapping();
+                    var stringVMap = Collections.singletonMap(GormProperties.TENANT_IDENTITY, jdbcMapping);
+                    FilterDefinition definition = new FilterDefinition(
+                            GormProperties.TENANT_IDENTITY,
+                            filterCondition,
+                            stringVMap
+                    );
+                    mappings.addFilterDefinition(definition);
+                }
+            }
         }
     }
 

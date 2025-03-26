@@ -1,6 +1,7 @@
 package grails.gorm.specs
 
-
+import grails.gorm.specs.entities.Club
+import grails.gorm.specs.entities.Team
 import org.grails.datastore.mapping.query.QueryException
 import spock.lang.Issue
 

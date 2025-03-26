@@ -25,6 +25,7 @@ import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.orm.hibernate.AbstractHibernateDatastore;
 import org.grails.orm.hibernate.datasource.MultipleDataSourceSupport;
+import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils;
 import org.hibernate.FetchMode;
 import org.hibernate.FlushMode;
@@ -71,7 +72,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     public static final Class<?>[] EMPTY_CLASS_ARRAY = {};
 
 
-
+    private static HibernateProxyHandler proxyHandler = new HibernateProxyHandler();
 
 
 
@@ -175,6 +176,45 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
                 go.setMetaClass(GroovySystem.getMetaClassRegistry().getMetaClass(persistentClass));
             }
         }
+    }
+
+    /**
+     * Unwraps and initializes a HibernateProxy.
+     * @param proxy The proxy
+     * @return the unproxied instance
+     */
+    public static Object unwrapProxy(HibernateProxy proxy) {
+        return proxyHandler.unwrap(proxy);
+    }
+
+    /**
+     * Returns the proxy for a given association or null if it is not proxied
+     *
+     * @param obj The object
+     * @param associationName The named assoication
+     * @return A proxy
+     */
+    public static HibernateProxy getAssociationProxy(Object obj, String associationName) {
+        return proxyHandler.getAssociationProxy(obj, associationName);
+    }
+
+    /**
+     * Checks whether an associated property is initialized and returns true if it is
+     *
+     * @param obj The name of the object
+     * @param associationName The name of the association
+     * @return true if is initialized
+     */
+    public static boolean isInitialized(Object obj, String associationName) {
+        return proxyHandler.isInitialized(obj, associationName);
+    }
+
+    /**
+     * Unproxies a HibernateProxy. If the proxy is uninitialized, it automatically triggers an initialization.
+     * In case the supplied object is null or not a proxy, the object will be returned as-is.
+     */
+    public static Object unwrapIfProxy(Object instance) {
+        return proxyHandler.unwrap(instance);
     }
 
 

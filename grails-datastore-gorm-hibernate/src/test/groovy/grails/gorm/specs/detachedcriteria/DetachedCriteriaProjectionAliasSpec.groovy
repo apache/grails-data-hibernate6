@@ -1,6 +1,7 @@
-package grails.gorm.specs
+package grails.gorm.specs.detachedcriteria
 
 import grails.gorm.DetachedCriteria
+import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import grails.gorm.transactions.Transactional
 import org.hibernate.SessionFactory

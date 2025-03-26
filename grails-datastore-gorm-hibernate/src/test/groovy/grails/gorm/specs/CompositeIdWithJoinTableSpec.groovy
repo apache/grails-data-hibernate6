@@ -9,11 +9,14 @@ import static grails.gorm.hibernate.mapping.MappingBuilder.define
 /**
  * Created by graemerocher on 26/01/2017.
  */
-@Ignore("Composite Id saving is not working")
+@Ignore("Mapping is not working")
 class CompositeIdWithJoinTableSpec extends HibernateGormDatastoreSpec {
+    @Override
+    List getDomainClasses() {
+        [CompositeIdParent,CompositeIdChild]
+    }
 
-
-    @Rollback
+    //    @Rollback
     void "test composite id with join table"() {
         when:"A parent with a composite id and a join table is saved"
         new CompositeIdParent(name: "Test" , last:"Test 2")

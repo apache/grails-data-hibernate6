@@ -1,5 +1,6 @@
 package grails.gorm.specs
 
+import grails.gorm.specs.entities.Club
 import grails.gorm.transactions.Rollback
 import groovy.transform.Generated
 import org.grails.orm.hibernate.HibernateDatastore

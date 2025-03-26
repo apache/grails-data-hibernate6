@@ -1,6 +1,7 @@
 package grails.gorm.specs
 
-
+import grails.gorm.specs.entities.Club
+import grails.gorm.specs.entities.Team
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 
 /**
@@ -10,7 +11,7 @@ import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 class SubqueryAliasSpec extends HibernateGormDatastoreSpec {
 
     List getDomainClasses() {
-        [Club,Team]
+        [Club, Team]
     }
 
 
@@ -23,10 +24,11 @@ class SubqueryAliasSpec extends HibernateGormDatastoreSpec {
         Team t = Team.where {
             def t = Team
             name == "First Team"
-            exists(Club.where {
-                id == t.club
-            }.property('name'))
-
+            exists(
+                    Club.where {
+                        id == t.club
+                    }.property('name')
+            )
         }.find()
 
         then:

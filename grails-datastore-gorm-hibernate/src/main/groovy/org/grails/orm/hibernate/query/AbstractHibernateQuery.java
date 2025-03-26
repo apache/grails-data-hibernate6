@@ -29,13 +29,16 @@ import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.query.AssociationQuery;
+import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.QueryException;
 import org.grails.datastore.mapping.query.Restrictions;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 import org.grails.orm.hibernate.IHibernateTemplate;
+import org.hibernate.NonUniqueResultException;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.ResultListTransformer;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
@@ -85,6 +88,7 @@ public abstract class AbstractHibernateQuery extends Query {
     protected LinkedList aliasInstanceStack = new LinkedList();
     private boolean hasJoins = false;
     protected DetachedCriteria detachedCriteria;
+    protected ProxyHandler proxyHandler = new HibernateProxyHandler();
     protected ResultTransformer resultTransformer;
 
     protected AbstractHibernateQuery(AbstractHibernateSession session, PersistentEntity entity) {
@@ -423,11 +427,16 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Object singleResult() {
+        org.hibernate.query.Query query = createQuery();
         try {
-            return createQuery().getSingleResult();
+
+            return proxyHandler.unwrap(query.getSingleResult());
+        }
+        catch (NonUniqueResultException e) {
+            return proxyHandler.unwrap(query.getResultList().get(0));
         }
         catch (jakarta.persistence.NoResultException e) {
-           return null;
+            return null;
         }
     }
 

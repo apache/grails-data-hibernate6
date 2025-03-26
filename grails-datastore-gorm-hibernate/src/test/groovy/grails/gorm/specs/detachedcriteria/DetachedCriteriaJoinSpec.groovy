@@ -1,6 +1,9 @@
-package grails.gorm.specs
+package grails.gorm.specs.detachedcriteria
 
 import grails.gorm.DetachedCriteria
+import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.specs.entities.Club
+import grails.gorm.specs.entities.Team
 import jakarta.persistence.criteria.JoinType
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.orm.hibernate.query.HibernateQuery
@@ -9,7 +12,7 @@ class DetachedCriteriaJoinSpec  extends HibernateGormDatastoreSpec {
 
     @Override
     List getDomainClasses() {
-        [Team,Club]
+        [Team, Club]
     }
 
     def "check if count works as expected"() {
