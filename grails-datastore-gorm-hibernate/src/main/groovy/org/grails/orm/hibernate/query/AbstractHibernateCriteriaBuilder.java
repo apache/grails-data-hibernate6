@@ -124,6 +124,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     private boolean shouldLock;
     private boolean shouldCache;
     private boolean readOnly;
+    private boolean distinct = false;
 
     @SuppressWarnings("rawtypes")
     public AbstractHibernateCriteriaBuilder(Class targetClass, SessionFactory sessionFactory, AbstractHibernateDatastore datastore) {
@@ -1157,7 +1158,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 count = true;
             }
             else if (name.equals(LIST_DISTINCT_CALL)) {
-                hibernateQuery.projections().distinct();
+                distinct = true;
             }
 
 
@@ -1172,7 +1173,10 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
 
             Object result;
             if (!uniqueResult) {
-                if (scroll) {
+                if (distinct) {
+                    hibernateQuery.distinct();
+                    result = hibernateQuery.list();
+                } else if (scroll) {
                     result = hibernateQuery.scroll();
                 }
                 else if (count) {

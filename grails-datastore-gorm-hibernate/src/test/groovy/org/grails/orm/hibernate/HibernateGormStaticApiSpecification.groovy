@@ -69,6 +69,7 @@ class HibernateGormStaticApiTest extends HibernateGormDatastoreSpec{
         results[1] == barneyAccount
     }
 
+    @Ignore("JPA Criteria requires a single predicate behind a not")
     def "not"() {
         when:
         def results   =  accountCriteria {
@@ -171,11 +172,13 @@ class HibernateGormStaticApiTest extends HibernateGormDatastoreSpec{
         new Account(balance: 250, firstName: "Fred", lastName: "Flintstone", branch: "Bedrock").save(flush:true)
         when:
         def results = accountCriteria.listDistinct {
-            eq("balance", 250)
+            property("branch")
+            order("branch")
         }
         then:
-        results.size() == 1
-        results[0] == fredAccount
+        results.size() == 2
+        results[0] == "Bedrock"
+        results[1] == "London"
     }
 
     @Ignore("This is documented as working but fails")

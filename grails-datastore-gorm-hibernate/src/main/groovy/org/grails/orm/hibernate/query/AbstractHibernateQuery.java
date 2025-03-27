@@ -488,11 +488,11 @@ public abstract class AbstractHibernateQuery extends Query {
         List<GroupPropertyProjection> groupProjections = collectGroupProjections();
 
         List<String> joinColumns = Stream.concat(aliasMap.keySet().stream(), collectJoinColumns().stream()).distinct().toList();
-
-
-        CriteriaQuery cq = projections.size() > 1 ?  cb.createQuery(Object[].class) : cb.createQuery(Object.class);
+        CriteriaQuery cq = projections.stream()
+                .filter( it -> !(it instanceof DistinctProjection || it instanceof DistinctPropertyProjection))
+                .toList().size() > 1 ?  cb.createQuery(Object[].class) : cb.createQuery(Object.class);
         projections.stream()
-                .filter( DistinctProjection.class::isInstance )
+                .filter( it -> it instanceof DistinctProjection || it instanceof DistinctPropertyProjection)
                 .findFirst()
                 .ifPresent(projection -> {
                     cq.distinct(true);
