@@ -15,6 +15,7 @@
  */
 package grails.gorm.specs
 
+import grails.gorm.specs.entities.Club
 import org.grails.orm.hibernate.GormSpec
 import spock.lang.Issue
 

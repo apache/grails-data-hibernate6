@@ -2,8 +2,7 @@ package grails.gorm.specs
 
 import grails.gorm.annotation.Entity
 import org.grails.orm.hibernate.GormSpec
-
-import java.sql.ResultSet
+import org.hibernate.engine.spi.SessionImplementor
 
 /**
  * Created by graemerocher on 24/02/16.
@@ -13,7 +12,10 @@ class EnumMappingSpec extends GormSpec {
     void "Test enum mapping"() {
         when:"An enum property is persisted"
         new Recipe(title: "Chicken Tikka Masala").save(flush:true)
-        def resultSet = sessionFactory.currentSession.connection().prepareStatement("select * from recipe").executeQuery()
+        SessionImplementor sessionImplementor = (SessionImplementor) sessionFactory.currentSession
+        def resultSet = sessionImplementor.doReturningWork {
+            return it.prepareStatement("select * from recipe").executeQuery()
+        }
         resultSet.next()
 
         then:"The enum is mapped as a varchar"

@@ -1,11 +1,6 @@
 package grails.gorm.specs
 
-import grails.gorm.tests.ChildEntity
-import grails.gorm.tests.ClassWithListArgBeforeValidate
-import grails.gorm.tests.ClassWithNoArgBeforeValidate
-import grails.gorm.tests.ClassWithOverloadedBeforeValidate
-import grails.gorm.tests.GormDatastoreSpec
-import grails.gorm.tests.TestEntity
+import grails.gorm.tests.*
 import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**

@@ -1,18 +1,20 @@
 package grails.gorm.specs.hasmany
 
 import grails.gorm.annotation.Entity
+import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
-import org.grails.datastore.mapping.collection.PersistentCollection
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.orm.hibernate.HibernateDatastore
 import spock.lang.AutoCleanup
-import spock.lang.Ignore
 import spock.lang.Shared
 import spock.lang.Specification
 
-class ListCollectionSpec extends Specification {
+class ListCollectionSpec extends HibernateGormDatastoreSpec {
 
-    @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(getClass().getPackage())
+    @Override
+    List getDomainClasses() {
+        [Animal,Leg]
+    }
 
     @Rollback
     void "test legs are not loaded eagerly"() {

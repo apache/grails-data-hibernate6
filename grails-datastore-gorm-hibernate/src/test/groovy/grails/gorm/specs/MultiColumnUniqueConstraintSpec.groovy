@@ -1,7 +1,6 @@
 package grails.gorm.specs
 
 import grails.gorm.annotation.Entity
-import grails.gorm.tests.GormDatastoreSpec
 import org.springframework.dao.DataIntegrityViolationException
 import spock.lang.Issue
 

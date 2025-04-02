@@ -1,5 +1,9 @@
 package grails.gorm.specs
 
+import grails.gorm.specs.entities.Club
+import grails.gorm.specs.entities.Contract
+import grails.gorm.specs.entities.Player
+import grails.gorm.specs.entities.Team
 import org.grails.orm.hibernate.GormSpec
 import spock.lang.Issue
 

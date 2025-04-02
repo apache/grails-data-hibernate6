@@ -19,17 +19,12 @@ import grails.gorm.annotation.Entity
 import grails.gorm.annotation.JpaEntity
 import grails.gorm.hibernate.mapping.MappingBuilder
 import grails.gorm.transactions.Rollback
-import org.grails.orm.hibernate.HibernateDatastore
-import spock.lang.AutoCleanup
-import spock.lang.Ignore
-import spock.lang.Issue
-import spock.lang.Shared
-import spock.lang.Specification
-
 import jakarta.persistence.CascadeType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.Id
 import jakarta.persistence.OneToMany
+import org.grails.orm.hibernate.HibernateDatastore
+import spock.lang.*
 
 /**
  * @author Graeme Rocher

@@ -1,10 +1,10 @@
 package org.grails.orm.hibernate.connections
 
 import grails.gorm.MultiTenant
+import grails.gorm.annotation.Entity
 import grails.gorm.multitenancy.CurrentTenant
 import grails.gorm.multitenancy.Tenant
 import grails.gorm.multitenancy.Tenants
-import grails.gorm.annotation.Entity
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
@@ -14,8 +14,6 @@ import org.hibernate.Session
 import org.hibernate.dialect.H2Dialect
 import org.hibernate.resource.jdbc.spi.JdbcSessionOwner
 import spock.lang.Specification
-
-import java.sql.Connection
 
 /**
  * Created by graemerocher on 07/07/2016.

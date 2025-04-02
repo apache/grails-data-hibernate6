@@ -1,26 +1,20 @@
 package grails.gorm.specs
 
-import grails.gorm.transactions.Rollback
+import grails.gorm.specs.entities.Club
+import grails.gorm.specs.entities.Team
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
-import org.grails.orm.hibernate.HibernateDatastore
-import org.springframework.transaction.PlatformTransactionManager
-import spock.lang.AutoCleanup
-import spock.lang.Shared
-import spock.lang.Specification
 
 /**
  * Created by graemerocher on 01/03/2017.
  */
 @ApplyDetachedCriteriaTransform
-class SubqueryAliasSpec extends Specification {
+class SubqueryAliasSpec extends HibernateGormDatastoreSpec {
 
-    @AutoCleanup @Shared HibernateDatastore datastore = new HibernateDatastore(
-        Club, Team
-    )
+    List getDomainClasses() {
+        [Club, Team]
+    }
 
-    @Shared PlatformTransactionManager transactionManager = datastore.getTransactionManager()
 
-    @Rollback
     void "Test subquery with root alias"() {
         given:
         Club c = new Club(name: "Manchester United").save()
@@ -30,10 +24,11 @@ class SubqueryAliasSpec extends Specification {
         Team t = Team.where {
             def t = Team
             name == "First Team"
-            exists(Club.where {
-                id == t.club
-            }.property('name'))
-
+            exists(
+                    Club.where {
+                        id == t.club
+                    }.property('name')
+            )
         }.find()
 
         then:

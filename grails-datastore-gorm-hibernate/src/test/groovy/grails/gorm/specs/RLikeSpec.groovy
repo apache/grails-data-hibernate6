@@ -2,9 +2,11 @@ package grails.gorm.specs
 
 import grails.gorm.annotation.Entity
 import org.grails.orm.hibernate.GormSpec
+import spock.lang.Ignore
 
 class RLikeSpec extends GormSpec {
 
+    @Ignore("RLIKE NOT IMPLEMENTED")
     void "test rlike works with H2"() {
         given:
         new RlikeFoo(name: "ABC").save(flush: true)

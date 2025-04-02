@@ -1,4 +1,4 @@
-package grails.gorm.specs
+package grails.gorm.specs.entities
 
 import grails.gorm.annotation.Entity
 import groovy.transform.ToString

@@ -15,6 +15,7 @@
 package org.grails.orm.hibernate.query;
 
 import grails.gorm.DetachedCriteria;
+import grails.gorm.DetachedCriteria;
 import groovy.lang.Closure;
 import groovy.util.logging.Slf4j;
 import jakarta.persistence.FetchType;
@@ -28,15 +29,21 @@ import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.query.AssociationQuery;
+import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 import org.grails.datastore.mapping.query.Query;
+import org.grails.datastore.mapping.query.QueryException;
 import org.grails.datastore.mapping.query.Restrictions;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 import org.grails.orm.hibernate.IHibernateTemplate;
+import org.hibernate.NonUniqueResultException;
 import org.hibernate.SessionFactory;
+import org.hibernate.query.ResultListTransformer;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaExpression;
+import org.hibernate.transform.ResultTransformer;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
@@ -48,6 +55,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -80,6 +88,8 @@ public abstract class AbstractHibernateQuery extends Query {
     protected LinkedList aliasInstanceStack = new LinkedList();
     private boolean hasJoins = false;
     protected DetachedCriteria detachedCriteria;
+    protected ProxyHandler proxyHandler = new HibernateProxyHandler();
+    protected ResultTransformer resultTransformer;
 
     protected AbstractHibernateQuery(AbstractHibernateSession session, PersistentEntity entity) {
         super(session, entity);
@@ -88,6 +98,10 @@ public abstract class AbstractHibernateQuery extends Query {
 
     public void setDetachedCriteria(DetachedCriteria detachedCriteria) {
         this.detachedCriteria = detachedCriteria;
+    }
+
+    public void setResultTransformer(ResultTransformer resultTransformer) {
+        this.resultTransformer = resultTransformer;
     }
 
 
@@ -184,6 +198,9 @@ public abstract class AbstractHibernateQuery extends Query {
             le(c.getProperty(),c.getValue());
         } else if (criterion instanceof LessThan c) {
             lt(c.getProperty(),c.getValue());
+        } else {
+            //TODO It could be that this is the only call needed!
+            detachedCriteria.add(criterion);
         }
     }
 
@@ -410,15 +427,21 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Object singleResult() {
+        org.hibernate.query.Query query = createQuery();
         try {
-            return createQuery().getSingleResult();
+
+            return proxyHandler.unwrap(query.getSingleResult());
+        }
+        catch (NonUniqueResultException e) {
+            return proxyHandler.unwrap(query.getResultList().get(0));
         }
         catch (jakarta.persistence.NoResultException e) {
-           return null;
+            return null;
         }
     }
 
     private final Predicate<Projection> idProjectionPredicate = projection -> projection instanceof IdProjection;
+    private final Predicate<Projection> distinctProjectionPredicate = projection -> projection instanceof DistinctProjection;
     private final Predicate<Projection> countProjectionPredicate = projection -> projection instanceof CountProjection;
     private final Predicate<Projection> countDistinctProjection = projection -> projection instanceof CountDistinctProjection;
     private final Predicate<Projection> maxProjectionPredicate = projection -> projection instanceof MaxProjection;
@@ -437,6 +460,7 @@ public abstract class AbstractHibernateQuery extends Query {
             , minProjectionPredicate
             , sumProjectionPredicate
             , avgProjectionPredicate
+            , distinctProjectionPredicate
     } ;
 
     @SafeVarargs
@@ -448,12 +472,14 @@ public abstract class AbstractHibernateQuery extends Query {
 
     protected org.hibernate.query.Query createQuery() {
         HibernateCriteriaBuilder cb = getCriteriaBuilder();
+
+
         List<DetachedAssociationCriteria> detachedAssociationCriteria = getDetachedAssociationCriteria();
 
         Map<String, DetachedAssociationCriteria> aliasMap = detachedAssociationCriteria.stream()
                 .collect(Collectors.toMap(
                         DetachedAssociationCriteria::getAssociationPath,
-                    criteria ->criteria)
+                    criteria ->criteria, (oldValue,newValue) -> newValue)
                 );
 
 
@@ -462,14 +488,20 @@ public abstract class AbstractHibernateQuery extends Query {
         List<GroupPropertyProjection> groupProjections = collectGroupProjections();
 
         List<String> joinColumns = Stream.concat(aliasMap.keySet().stream(), collectJoinColumns().stream()).distinct().toList();
-
-
-        CriteriaQuery cq = projections.size() > 1 ?  cb.createQuery(Object[].class) : cb.createQuery(Object.class);
+        CriteriaQuery cq = projections.stream()
+                .filter( it -> !(it instanceof DistinctProjection || it instanceof DistinctPropertyProjection))
+                .toList().size() > 1 ?  cb.createQuery(Object[].class) : cb.createQuery(Object.class);
+        projections.stream()
+                .filter( it -> it instanceof DistinctProjection || it instanceof DistinctPropertyProjection)
+                .findFirst()
+                .ifPresent(projection -> {
+                    cq.distinct(true);
+                });
         From root = cq.from(entity.getJavaClass());
         Map<String, From> fromMap = detachedAssociationCriteria.stream()
                 .collect(Collectors.toMap(
                         DetachedAssociationCriteria::getAssociationPath,
-                        criteria -> cq.from(criteria.getAssociation().getOwner().getJavaClass()))
+                        criteria -> cq.from(criteria.getAssociation().getOwner().getJavaClass()) , (oldValue,newValue) -> newValue)
                 );
         fromMap.put("root", root);
         Map<String, From> tablesByName = assignJoinTables(joinColumns, root,aliasMap, fromMap);
@@ -488,6 +520,9 @@ public abstract class AbstractHibernateQuery extends Query {
         }
         if (Objects.nonNull(lockResult)) {
             query.setLockMode(lockResult);
+        }
+        if (Objects.nonNull(resultTransformer)) {
+            query.setResultTransformer(resultTransformer);
         }
         return query;
     }
@@ -536,7 +571,8 @@ public abstract class AbstractHibernateQuery extends Query {
     private List<Projection> collectProjections() {
         List<Projection> projections = projections().getProjectionList()
                 .stream()
-                .filter(combinePredicates(projectionPredicates)).toList();
+                .filter(combinePredicates(projectionPredicates))
+                .toList();
         return projections;
     }
 
@@ -627,7 +663,7 @@ public abstract class AbstractHibernateQuery extends Query {
     private static String aliasColumn(Map<String, DetachedAssociationCriteria> aliasMap, String associationPath, Join table) {
         String column = associationPath;
         if (aliasMap.containsKey(associationPath)) {
-            column = aliasMap.get(associationPath).getAlias();
+            column = Optional.ofNullable(aliasMap.get(associationPath).getAlias()).orElseThrow(() -> new QueryException("Association without alias"));
             table.alias(column);
         }
         return column;
@@ -640,9 +676,12 @@ public abstract class AbstractHibernateQuery extends Query {
             if (countProjectionPredicate.test(projection)) {
                 return cb.count(tablesByName.get("root"));
             } else if (countDistinctProjection.test(projection)) {
-                return cb.countDistinct(tablesByName.get("root"));
+                String propertyName = ((PropertyProjection) projection).getPropertyName();
+                return cb.countDistinct(tablesByName.get("root").get(propertyName));
             } else if (idProjectionPredicate.test(projection)) {
                 return (JpaExpression) tablesByName.get("root").get("id");
+            } else if (distinctProjectionPredicate.test(projection)) {
+                return null;
             } else {
                 String propertyName = ((PropertyProjection) projection).getPropertyName();
                 Path path = getFullyQualifiedPath(tablesByName, propertyName);

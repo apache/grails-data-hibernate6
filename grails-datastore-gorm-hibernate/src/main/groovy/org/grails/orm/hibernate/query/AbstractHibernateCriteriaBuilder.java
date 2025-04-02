@@ -5,15 +5,19 @@ import grails.gorm.MultiTenant;
 import groovy.lang.Closure;
 import groovy.lang.DelegatesTo;
 import groovy.lang.GroovyObjectSupport;
+import groovy.lang.GroovySystem;
 import groovy.lang.MetaClass;
 import groovy.lang.MetaMethod;
 import groovy.lang.MissingMethodException;
 import groovy.util.logging.Slf4j;
 import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import jakarta.persistence.metamodel.Attribute;
+import jakarta.persistence.metamodel.EntityType;
+import jakarta.persistence.metamodel.Metamodel;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.BuildableCriteria;
@@ -29,9 +33,11 @@ import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.transform.ResultTransformer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
 import org.springframework.core.convert.ConversionService;
 import org.grails.datastore.mapping.query.api.ProjectionList;
 
+import java.beans.PropertyDescriptor;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -118,6 +124,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     private boolean shouldLock;
     private boolean shouldCache;
     private boolean readOnly;
+    private boolean distinct = false;
 
     @SuppressWarnings("rawtypes")
     public AbstractHibernateCriteriaBuilder(Class targetClass, SessionFactory sessionFactory, AbstractHibernateDatastore datastore) {
@@ -223,6 +230,12 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      */
     public BuildableCriteria cache(boolean shouldCache) {
         this.shouldCache = shouldCache;
+        return this;
+    }
+
+
+    public BuildableCriteria maxResults(int max) {
+        hibernateQuery.maxResults(max);
         return this;
     }
 
@@ -432,7 +445,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @param transformer The result transformer to use.
      */
     public void resultTransformer(ResultTransformer transformer) {
-        resultTransformer = transformer;
+        hibernateQuery.setResultTransformer(transformer);
     }
 
 
@@ -857,26 +870,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         return this;
     }
 
-    /**
-     * Applies a sql restriction to the results to allow something like:
-     *
-     * @param sqlRestriction the sql restriction
-     * @return a Criteria instance
-     */
-    public Criteria sqlRestriction(String sqlRestriction) {
-        return sqlRestriction(sqlRestriction, Collections.EMPTY_LIST);
-    }
 
-    /**
-     * Applies a sql restriction to the results to allow something like:
-     *
-     * @param sqlRestriction the sql restriction
-     * @param values jdbc parameters
-     * @return a Criteria instance
-     */
-    public Criteria sqlRestriction(String sqlRestriction, List<?> values) {
-       throw new RuntimeException("This feature is not supported in Hibernate 6");
-    }
 
     /**
      * Creates a Criterion with from the specified property name and "like" expression
@@ -962,6 +956,12 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         hibernateQuery.order(o);
         return this;
     }
+
+    public Criteria firstResult(int offset) {
+        hibernateQuery.firstResult(offset);
+        return this;
+    }
+
 
 
 
@@ -1124,6 +1124,14 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         return invokeMethod(SCROLL_CALL, new Object[]{c});
     }
 
+    public JoinType convertFromInt(Integer from) {
+        return switch (from) {
+            case 1 -> JoinType.LEFT;
+            case 2 -> JoinType.RIGHT;
+            default -> JoinType.INNER;
+        };
+    }
+
     @SuppressWarnings("rawtypes")
     @Override
     public Object invokeMethod(String name, Object obj) {
@@ -1131,7 +1139,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
 
         if (paginationEnabledList && SET_RESULT_TRANSFORMER_CALL.equals(name) && args.length == 1 &&
                 args[0] instanceof ResultTransformer) {
-            resultTransformer = (ResultTransformer) args[0];
+            hibernateQuery.setResultTransformer((ResultTransformer) args[0]);
             return null;
         }
 
@@ -1150,7 +1158,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 count = true;
             }
             else if (name.equals(LIST_DISTINCT_CALL)) {
-                hibernateQuery.projections().distinct();
+                distinct = true;
             }
 
 
@@ -1165,7 +1173,10 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
 
             Object result;
             if (!uniqueResult) {
-                if (scroll) {
+                if (distinct) {
+                    hibernateQuery.distinct();
+                    result = hibernateQuery.list();
+                } else if (scroll) {
                     result = hibernateQuery.scroll();
                 }
                 else if (count) {
@@ -1217,69 +1228,68 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             return metaMethod.invoke(this, args);
         }
 
-        metaMethod = criteriaMetaClass.getMetaMethod(name, args);
+        MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(targetClass);
+        metaMethod = metaClass.getMetaMethod(name, args);
         if (metaMethod != null) {
             return metaMethod.invoke(criteriaQuery, args);
         }
-        metaMethod = criteriaMetaClass.getMetaMethod(NameUtils.getSetterName(name), args);
+        metaMethod = metaClass.getMetaMethod(NameUtils.getSetterName(name), args);
         if (metaMethod != null) {
             return metaMethod.invoke(criteriaQuery, args);
         }
 
         if (isAssociationQueryMethod(args) || isAssociationQueryWithJoinSpecificationMethod(args)) {
-            if (1 == 1) {
-                throw new RuntimeException("This branch needs to be filled out");
-            }
-            final boolean hasMoreThanOneArg = args.length > 1;
-            Object callable = hasMoreThanOneArg ? args[1] : args[0];
-//            int joinType = hasMoreThanOneArg ? (Integer)args[0] : org.hibernate.sql.JoinType.INNER_JOIN.getJoinTypeValue();
-
-//            if (name.equals(AND) || name.equals(OR) || name.equals(NOT)) {
-//                if (criteria == null) {
-//                    throwRuntimeException(new IllegalArgumentException("call to [" + name + "] not supported here"));
-//                }
-//
-//                logicalExpressionStack.add(new LogicalExpression(name));
-//                invokeClosureNode(callable);
-//
-//                LogicalExpression logicalExpression = logicalExpressionStack.remove(logicalExpressionStack.size()-1);
-//                addToCriteria(logicalExpression.toCriterion());
-//
-//                return name;
+//            if (1 == 1) {
+//                throw new RuntimeException("This branch needs to be filled out");
 //            }
+            final boolean hasMoreThanOneArg = args.length > 1;
+            Closure callable = hasMoreThanOneArg ? (Closure) args[1] : (Closure) args[0];
+            JoinType joinType = hasMoreThanOneArg ? convertFromInt((Integer)args[0]) : convertFromInt(0);
 
-            if (name.equals(PROJECTIONS) && args.length == 1 && (args[0] instanceof Closure)) {
-//                if (criteria == null) {
-//                    throwRuntimeException(new IllegalArgumentException("call to [" + name + "] not supported here"));
-//                }
-
-                projectionList = new Query.ProjectionList();
-                invokeClosureNode(callable);
-
-//                if (projectionList != null && projectionList.getLength() > 0) {
-//                    criteria.setProjection(projectionList);
-//                }
+            if (name.equals(AND)) {
+                hibernateQuery.and(callable);
 
                 return name;
             }
 
-//            final PropertyDescriptor pd = BeanUtils.getPropertyDescriptor(targetClass, name);
-//            if (pd != null && pd.getReadMethod() != null) {
-//                final Metamodel metamodel = sessionFactory.getMetamodel();
-//                final EntityType<?> entityType = metamodel.entity(targetClass);
-//                final Attribute<?, ?> attribute = entityType.getAttribute(name);
-//
-//                if (attribute.isAssociation()) {
-//                    Class oldTargetClass = targetClass;
-//                    targetClass = getClassForAssociationType(attribute);
-//                    if (targetClass.equals(oldTargetClass) && !hasMoreThanOneArg) {
-//                        joinType = org.hibernate.sql.JoinType.LEFT_OUTER_JOIN.getJoinTypeValue(); // default to left join if joining on the same table
-//                    }
-//                    associationStack.add(name);
-//                    final String associationPath = getAssociationPath();
+            if (name.equals(OR) ) {
+                hibernateQuery.or(callable);
+
+                return name;
+            }
+
+            if ( name.equals(NOT)) {
+                hibernateQuery.not(callable);
+
+                return name;
+            }
+
+
+            if (name.equals(PROJECTIONS) && args.length == 1 && (args[0] instanceof Closure)) {
+
+                invokeClosureNode(callable);
+
+                return name;
+            }
+
+            final PropertyDescriptor pd = BeanUtils.getPropertyDescriptor(targetClass, name);
+            if (pd != null && pd.getReadMethod() != null) {
+                final Metamodel metamodel = sessionFactory.getMetamodel();
+                final EntityType<?> entityType = metamodel.entity(targetClass);
+                final Attribute<?, ?> attribute = entityType.getAttribute(name);
+
+                if (attribute.isAssociation()) {
+                    Class oldTargetClass = targetClass;
+                    targetClass = getClassForAssociationType(attribute);
+                    if (targetClass.equals(oldTargetClass) && !hasMoreThanOneArg) {
+                        joinType = JoinType.LEFT; // default to left join if joining on the same table
+                    }
+
+                    final String associationPath = getAssociationPath();
+                    hibernateQuery.join(name,joinType);
 //                    createAliasIfNeccessary(name, associationPath,joinType);
-//                    // the criteria within an association node are grouped with an implicit AND
-//                    logicalExpressionStack.add(new LogicalExpression(AND));
+                    // the criteria within an association node are grouped with an implicit AND
+                    hibernateQuery.in(name, new DetachedCriteria(targetClass).build(callable));
 //                    invokeClosureNode(callable);
 //                    aliasStack.remove(aliasStack.size() - 1);
 //                    if (!aliasInstanceStack.isEmpty()) {
@@ -1290,10 +1300,10 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
 //                        addToCriteria(logicalExpression.toCriterion());
 //                    }
 //                    associationStack.remove(associationStack.size()-1);
-//                    targetClass = oldTargetClass;
-//
-//                    return name;
-//                }
+                    targetClass = oldTargetClass;
+
+                    return name;
+                }
 //                if (attribute.getPersistentAttributeType() == Attribute.PersistentAttributeType.EMBEDDED) {
 //                    associationStack.add(name);
 //                    logicalExpressionStack.add(new LogicalExpression(AND));
@@ -1308,7 +1318,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
 //                    associationStack.remove(associationStack.size()-1);
 //                    return name;
 //                }
-//            }
+            }
         }
         else if (args.length == 1 && args[0] != null) {
 //            if (criteriaQuery == null) {

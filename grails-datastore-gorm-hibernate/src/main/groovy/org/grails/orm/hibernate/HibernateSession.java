@@ -27,8 +27,10 @@ import jakarta.persistence.criteria.Root;
 import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.query.event.PostQueryEvent;
 import org.grails.datastore.mapping.query.event.PreQueryEvent;
+import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 import org.grails.orm.hibernate.query.HibernateHqlQuery;
 import org.grails.orm.hibernate.query.HibernateQuery;
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -38,6 +40,7 @@ import org.grails.datastore.mapping.query.jpa.JpaQueryBuilder;
 import org.grails.datastore.mapping.query.jpa.JpaQueryInfo;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 import org.hibernate.*;
+import org.hibernate.proxy.HibernateProxy;
 import org.springframework.context.ApplicationEventPublisher;
 
 /**
@@ -49,6 +52,7 @@ import org.springframework.context.ApplicationEventPublisher;
 @SuppressWarnings("rawtypes")
 public class HibernateSession extends AbstractHibernateSession {
 
+    ProxyHandler proxyHandler = new HibernateProxyHandler();
     DefaultTimestampProvider timestampProvider;
 
     public HibernateSession(HibernateDatastore hibernateDatastore, SessionFactory sessionFactory, int defaultFlushMode) {
@@ -64,6 +68,9 @@ public class HibernateSession extends AbstractHibernateSession {
     @Override
     public Serializable getObjectIdentifier(Object instance) {
         if(instance == null) return null;
+        if(proxyHandler.isProxy(instance)) {
+            return (Serializable) ((HibernateProxy)instance).getHibernateLazyInitializer().getIdentifier();
+        }
         Class<?> type = instance.getClass();
         ClassPropertyFetcher cpf = ClassPropertyFetcher.forClass(type);
         final PersistentEntity persistentEntity = getMappingContext().getPersistentEntity(type.getName());

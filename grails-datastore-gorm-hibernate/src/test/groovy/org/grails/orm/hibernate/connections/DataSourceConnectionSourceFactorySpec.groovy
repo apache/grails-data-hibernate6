@@ -1,10 +1,9 @@
 package org.grails.orm.hibernate.connections
 
-import org.grails.datastore.mapping.core.DatastoreUtils
-import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory
 import org.grails.datastore.gorm.jdbc.schema.DefaultSchemaHandler
-import org.hibernate.dialect.OracleDialect
+import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import spock.lang.Specification
 
 /**

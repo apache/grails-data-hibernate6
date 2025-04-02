@@ -2,20 +2,19 @@ package grails.gorm.specs
 
 import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
-import org.grails.orm.hibernate.HibernateDatastore
-import org.springframework.transaction.PlatformTransactionManager
-import spock.lang.AutoCleanup
+import org.jetbrains.annotations.NotNull
 import spock.lang.Issue
-import spock.lang.Shared
-import spock.lang.Specification
 
 /**
  * Created by graemerocher on 26/01/2017.
  */
-class CompositeIdWithManyToOneAndSequenceSpec extends Specification {
+class CompositeIdWithManyToOneAndSequenceSpec extends HibernateGormDatastoreSpec {
 
-    @AutoCleanup @Shared HibernateDatastore datastore = new HibernateDatastore(Tooth, ToothDisease)
-    @Shared PlatformTransactionManager transactionManager = datastore.transactionManager
+    List getDomainClasses() {
+        [Tooth, ToothDisease]
+    }
+
+
 
     @Rollback
     @Issue('https://github.com/grails/grails-data-mapping/issues/835')
@@ -23,7 +22,10 @@ class CompositeIdWithManyToOneAndSequenceSpec extends Specification {
 
         when:"a many to one association is created"
         ToothDisease td = new ToothDisease(nrVersion: 1).save()
-        new Tooth(toothDisease: td).save(flush:true)
+
+        def tooth = new Tooth()
+        tooth.toothDisease << td
+        tooth.save(flush:true)
 
         then:"The object was saved"
         Tooth.count() == 1
@@ -36,7 +38,7 @@ class CompositeIdWithManyToOneAndSequenceSpec extends Specification {
 @Entity
 class Tooth {
     Integer id
-    ToothDisease toothDisease
+    TreeSet<ToothDisease> toothDisease = new TreeSet<>()
     static mapping = {
         table name: 'AK_TOOTH'
         id generator: 'sequence', params: [sequence: 'SEQ_AK_TOOTH']
@@ -48,7 +50,7 @@ class Tooth {
 }
 
 @Entity
-class ToothDisease implements Serializable {
+class ToothDisease implements Serializable,Comparable<ToothDisease> {
     Integer idColumn
     Integer nrVersion
     static mapping = {
@@ -56,5 +58,10 @@ class ToothDisease implements Serializable {
         idColumn column: 'ID', generator: 'sequence', params: [sequence: 'SEQ_AK_TOOTH_DISEASE']
         nrVersion column: 'NR_VERSION'
         id composite: ['idColumn', 'nrVersion']
+    }
+
+    @Override
+    int compareTo(@NotNull ToothDisease o) {
+        return idColumn <=> ((ToothDisease)o).idColumn
     }
 }

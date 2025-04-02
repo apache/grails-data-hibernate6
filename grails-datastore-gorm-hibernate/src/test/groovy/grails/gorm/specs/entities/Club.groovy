@@ -1,7 +1,7 @@
-package grails.gorm.specs
+package grails.gorm.specs.entities
 
-import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.annotation.Entity
+import grails.gorm.hibernate.HibernateEntity
 
 @Entity
 class Club implements HibernateEntity<Club> {

@@ -1,21 +1,20 @@
 package grails.gorm.specs.validation
 
 import grails.gorm.annotation.Entity
+import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
-import org.grails.orm.hibernate.HibernateDatastore
-import org.hibernate.validator.constraints.NotBlank
-import spock.lang.AutoCleanup
-import spock.lang.Shared
-import spock.lang.Specification
-
 import jakarta.validation.constraints.Digits
+import org.hibernate.validator.constraints.NotBlank
 
 /**
  * Created by graemerocher on 07/04/2017.
  */
-class BeanValidationSpec extends Specification {
+class BeanValidationSpec extends HibernateGormDatastoreSpec {
 
-    @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(Bean)
+    @Override
+    List getDomainClasses() {
+        [Bean]
+    }
 
     @Rollback
     void "test bean validation API validate on save"() {
@@ -37,5 +36,5 @@ class Bean {
     @NotBlank
     String name
     @Digits(integer = 6, fraction = 2)
-    Double price
+    BigDecimal price
 }

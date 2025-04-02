@@ -3,10 +3,8 @@ package org.grails.orm.hibernate.connections
 import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.ConnectionSource
-import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.hibernate.SessionFactory
 import org.hibernate.dialect.H2Dialect
-import org.hibernate.dialect.OracleDialect
 import spock.lang.Specification
 
 /**

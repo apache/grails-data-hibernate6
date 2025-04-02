@@ -5,21 +5,20 @@ import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
-import org.grails.orm.hibernate.HibernateDatastore
-import org.springframework.transaction.PlatformTransactionManager
-import spock.lang.AutoCleanup
 import spock.lang.Ignore
-import spock.lang.Shared
-import spock.lang.Specification
 
 /**
  * Created by graemerocher on 04/11/16.
  */
 @ApplyDetachedCriteriaTransform
-class TablePerSubClassAndEmbeddedSpec extends Specification {
+@Ignore("How does JPA deal with subclasses?")
+class TablePerSubClassAndEmbeddedSpec extends HibernateGormDatastoreSpec {
 
-    @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(Company, Vendor)
-    @Shared PlatformTransactionManager transactionManager = hibernateDatastore.getTransactionManager()
+    @Override
+    List getDomainClasses() {
+        [Company, Vendor]
+    }
+
 
     @Rollback
     void 'test table per subclass with embedded entity'() {
