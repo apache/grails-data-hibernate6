@@ -5,6 +5,7 @@ import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.hibernate.SessionFactory
 import org.hibernate.dialect.H2Dialect
+import org.hibernate.query.criteria.JpaCriteriaQuery
 import spock.lang.Specification
 
 /**
@@ -26,11 +27,10 @@ class HibernateConnectionSourceFactorySpec extends Specification {
                 'hibernate.hbm2ddl.auto': 'create'
         ]
         def connectionSource = factory.create(ConnectionSource.DEFAULT, DatastoreUtils.createPropertyResolver(config))
-
+        def query = connectionSource.source.getCriteriaBuilder().createQuery(Foo)
+        query.select(query.from(Foo))
         then:"The session factory is created"
-        connectionSource.source instanceof SessionFactory
-        connectionSource.source.getMetamodel().entity(Foo.name)
-        connectionSource.source.openSession().createCriteria(Foo).list().size() == 0
+        connectionSource.source.openSession().createQuery(query).list().size() == 0
 
         when:"The connection source is closed"
         connectionSource.close()
