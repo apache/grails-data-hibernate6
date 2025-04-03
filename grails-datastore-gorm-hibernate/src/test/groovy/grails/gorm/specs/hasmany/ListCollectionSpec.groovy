@@ -25,9 +25,9 @@ class ListCollectionSpec extends HibernateGormDatastoreSpec {
             .addToLegs(new Leg())
             .addToLegs(new Leg())
             .save(flush: true, failOnError: true)
-        datastore.currentSession.flush()
-        datastore.currentSession.clear()
-        ProxyHandler ph = datastore.mappingContext.proxyHandler
+        setupClass.hibernateDatastore.currentSession.flush()
+        setupClass.hibernateDatastore.currentSession.clear()
+        ProxyHandler ph = setupClass.hibernateDatastore.mappingContext.proxyHandler
 
         when:
         Animal animal = Animal.load(1)
