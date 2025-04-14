@@ -662,12 +662,26 @@ public abstract class AbstractHibernateQuery extends Query {
     }
 
     private static String aliasColumn(Map<String, DetachedAssociationCriteria> aliasMap, String associationPath, Join table) {
-        String column = associationPath;
-        if (aliasMap.containsKey(associationPath)) {
-            column = Optional.ofNullable(aliasMap.get(associationPath).getAlias()).orElseThrow(() -> new QueryException("Association without alias"));
-            table.alias(column);
+        // Attempt to find specific criteria configuration for this association path
+        DetachedAssociationCriteria criteria = aliasMap.get(associationPath);
+
+        if (criteria != null) {
+            // If criteria configuration exists:
+            // Determine the alias: use the one from criteria if it's not null,
+            // otherwise default back to using the associationPath itself.
+            String aliasToUse = Objects.requireNonNullElse(criteria.getAlias(), associationPath);
+
+            // Apply the determined alias explicitly to the Join object
+            table.alias(aliasToUse);
+
+            // Return the alias that was determined and applied
+            return aliasToUse;
+        } else {
+            // If no specific criteria configuration was found,
+            // return the original associationPath as the implicit alias.
+            // We don't explicitly call table.alias() here, letting JPA/Hibernate handle defaults.
+            return associationPath;
         }
-        return column;
     }
 
     private Function<Projection, JpaExpression> projectionToJpaExpression(

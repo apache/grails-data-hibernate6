@@ -3,6 +3,8 @@ package org.grails.orm.hibernate.query;
 import groovy.util.logging.Slf4j;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
@@ -50,8 +52,11 @@ public class PredicateGenerator {
                         List<Query.Criterion> criterionList = ((Query.Conjunction) criterion).getCriteria();
                         return cb.and(getPredicates(cb, criteriaQuery, root_, criterionList, tablesByName));
                     } else if (criterion instanceof DetachedAssociationCriteria<?> c) {
+                            Join child = root_.join(c.getAssociationPath(), JoinType.LEFT);
                             List<Query.Criterion> criterionList = c.getCriteria();
-                            return cb.and(getPredicates(cb, criteriaQuery, root_, criterionList, tablesByName));
+                            Map<String, From> childTablesByName = new HashMap<>(tablesByName);
+                            childTablesByName.put("root",child);
+                            return cb.and(getPredicates(cb, criteriaQuery, child, criterionList, childTablesByName));
                     } else if (criterion instanceof Query.Negation) {
                         List<Query.Criterion> criterionList = ((Query.Negation) criterion).getCriteria();
                         Predicate[] predicates = getPredicates(cb, criteriaQuery, root_, criterionList, tablesByName);

@@ -11,7 +11,6 @@ import spock.lang.Ignore
  * Created by graemerocher on 04/11/16.
  */
 @ApplyDetachedCriteriaTransform
-//TODO: Closure syntax not detecting that address is an embedded entity
 class TablePerSubClassAndEmbeddedSpec extends HibernateGormDatastoreSpec {
 
     @Override
@@ -41,7 +40,7 @@ class TablePerSubClassAndEmbeddedSpec extends HibernateGormDatastoreSpec {
         when:"A query is parsed that queries the embedded entity"
         def gcl = new GroovyClassLoader()
         DetachedCriteria criteria = gcl.parseClass('''
-import grails.gorm.tests.*
+import grails.gorm.specs.*
 
 Vendor.where {
     address.zip =~ '%44%'
