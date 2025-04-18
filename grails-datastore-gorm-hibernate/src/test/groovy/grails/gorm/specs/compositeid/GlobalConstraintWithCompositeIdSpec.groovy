@@ -14,7 +14,7 @@ import spock.lang.Issue
 /**
  * Created by graemerocher on 17/02/2017.
  */
-//TODO CompositeId not working
+//TODO 2025-04-17 CompositeId not working
 class GlobalConstraintWithCompositeIdSpec extends HibernateGormDatastoreSpec {
 
     @Override
