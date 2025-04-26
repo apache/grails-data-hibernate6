@@ -20,6 +20,29 @@ class WhereQueryWithAssociationSortSpec extends HibernateGormDatastoreSpec {
         def t2 = new Team(club: c2, name: "Arsenal First Team").save(flush:true)
 
         when:"a where query uses a sort on an association"
+
+        /**
+         * 2025/04/25
+         *    select
+         t1_0.id,
+         t1_0.club_id,
+         t1_0.name,
+         t1_0.version
+         from
+         team t1_0
+         left join
+         club c1_0
+         on c1_0.id=t1_0.club_id, team t2_0
+         join
+         club c2_0
+         on c2_0.id=t2_0.club_id
+         where
+         c1_0.name=?
+         order by
+         lower(c2_0.name)
+         offset
+         ? rows
+         */
         def results = Team.where {
             club.name == "Manchester United"
         }.list(sort:'club.name')
