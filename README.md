@@ -1,3 +1,1 @@
-# GORM for Hibernate 6
-
-This project implements [GORM](https://gorm.grails.org) for the Hibernate 6.
+This project has been relocated to the [merge-hibernate6](https://github.com/apache/grails-core/commits/merge-hibernate6/) branch of [grails-core](https://github.com/apache/grails-core) as of Grails 7.
